@@ -1,0 +1,35 @@
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './store/authStore';
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import ElectionsPage from './pages/ElectionsPage';
+import BallotPage from './pages/BallotPage';
+import ResultsPage from './pages/ResultsPage';
+import ReceiptPage from './pages/ReceiptPage';
+import AdminPage from './pages/AdminPage';
+
+const App: React.FC = () => {
+  const { initialize } = useAuthStore();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/elections" element={<ElectionsPage />} />
+        <Route path="/ballot/:electionId" element={<BallotPage />} />
+        <Route path="/results/:electionId" element={<ResultsPage />} />
+        <Route path="/receipt/:txHash" element={<ReceiptPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+export default App;
