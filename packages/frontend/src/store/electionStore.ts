@@ -7,11 +7,13 @@ interface ElectionStore {
   candidates: Candidate[];
   results: ElectionResult[];
   isLoading: boolean;
+  error: string | null;
   setElections: (elections: Election[]) => void;
   setSelectedElection: (election: Election | null) => void;
   setCandidates: (candidates: Candidate[]) => void;
   setResults: (results: ElectionResult[]) => void;
   setIsLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
 }
 
 export const useElectionStore = create<ElectionStore>((set) => ({
@@ -20,9 +22,11 @@ export const useElectionStore = create<ElectionStore>((set) => ({
   candidates: [],
   results: [],
   isLoading: false,
+  error: null,
   setElections: (elections) => set({ elections }),
   setSelectedElection: (election) => set({ selectedElection: election }),
   setCandidates: (candidates) => set({ candidates }),
   setResults: (results) => set({ results }),
   setIsLoading: (loading) => set({ isLoading: loading }),
+  setError: (error) => set({ error }),
 }));

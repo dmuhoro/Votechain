@@ -1,10 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import api from '../lib/api';
+import { ElectionStats } from '../types';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState<ElectionStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadStats = async () => {
+      try {
+        const { data } = await api.get<ElectionStats>('/api/stats');
+        if (!cancelled) setStats(data);
+      } catch {
+        if (!cancelled) setStatsError(true);
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    };
+    loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
@@ -76,20 +99,33 @@ const LandingPage: React.FC = () => {
 
       {/* Stats Section */}
       <div className="max-w-6xl mx-auto px-4 py-20">
-        <div className="grid md:grid-cols-3 gap-8 text-center">
-          <div>
-            <div className="text-4xl font-bold text-blue-400 mb-2">0</div>
-            <p className="text-gray-400">Active Elections</p>
+        {statsLoading ? (
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div className="animate-pulse"><div className="text-4xl font-bold text-blue-400 mb-2">…</div><p className="text-gray-400">Active Elections</p></div>
+            <div className="animate-pulse"><div className="text-4xl font-bold text-green-400 mb-2">…</div><p className="text-gray-400">Total Votes Cast</p></div>
+            <div className="animate-pulse"><div className="text-4xl font-bold text-purple-400 mb-2">…</div><p className="text-gray-400">Registered Voters</p></div>
           </div>
-          <div>
-            <div className="text-4xl font-bold text-green-400 mb-2">0</div>
-            <p className="text-gray-400">Total Votes Cast</p>
+        ) : statsError ? (
+          <div className="text-center text-gray-400">
+            <p>Live stats are temporarily unavailable.</p>
+            <p className="text-sm mt-1">Vote records remain auditable on-chain regardless.</p>
           </div>
-          <div>
-            <div className="text-4xl font-bold text-purple-400 mb-2">100%</div>
-            <p className="text-gray-400">Transparency Rate</p>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-blue-400 mb-2">{stats?.activeElections ?? 0}</div>
+              <p className="text-gray-400">Active Elections</p>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-green-400 mb-2">{stats?.totalVotes ?? 0}</div>
+              <p className="text-gray-400">Total Votes Cast</p>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-purple-400 mb-2">{stats?.registeredVoters ?? 0}</div>
+              <p className="text-gray-400">Registered Voters</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Footer */}

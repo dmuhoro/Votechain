@@ -13,6 +13,7 @@ import authRoutes from './routes/auth';
 import electionRoutes from './routes/elections';
 import voteRoutes from './routes/votes';
 import adminRoutes from './routes/admin';
+import statsRoutes from './routes/stats';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/elections', electionRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health Check
 app.get('/api/health', (_req: Request, res: Response) => {

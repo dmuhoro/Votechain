@@ -6,7 +6,7 @@ import Button from '../components/ui/Button';
 
 const ElectionsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { elections } = useElection();
+  const { elections, isLoading, error, fetchElections } = useElection();
   const [filter, setFilter] = useState<'all' | 'active' | 'upcoming' | 'closed'>('all');
 
   const now = new Date();
@@ -54,7 +54,18 @@ const ElectionsPage: React.FC = () => {
         </div>
 
         {/* Elections Grid */}
-        {filteredElections.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400 text-lg">Loading elections...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-200 text-lg mb-4">{error}</p>
+            <Button variant="secondary" onClick={fetchElections}>
+              Retry
+            </Button>
+          </div>
+        ) : filteredElections.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-400 text-lg">No elections found in this category.</p>
           </div>

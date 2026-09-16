@@ -11,7 +11,7 @@ const ResultsPage: React.FC = () => {
   const { electionId } = useParams<{ electionId: string }>();
   const navigate = useNavigate();
   const [election, setElection] = useState<Election | null>(null);
-  const { results, isLoading, lastUpdated, refetch } = useResults(electionId ? Number(electionId) : null);
+  const { results, isLoading, lastUpdated, refetch, error } = useResults(electionId ? Number(electionId) : null);
 
   useEffect(() => {
     const fetchElection = async () => {
@@ -56,7 +56,16 @@ const ResultsPage: React.FC = () => {
 
         <Card>
           <h2 className="text-2xl font-bold mb-6">Live Results</h2>
-          <ResultsChart results={results} isLoading={isLoading} />
+          {error ? (
+            <div className="text-center py-8">
+              <p className="text-red-200 mb-4">{error}</p>
+              <Button variant="secondary" onClick={refetch}>
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <ResultsChart results={results} isLoading={isLoading} />
+          )}
           <div className="mt-8 flex gap-2">
             <Button variant="secondary" onClick={refetch} className="flex-1">
               Refresh Results

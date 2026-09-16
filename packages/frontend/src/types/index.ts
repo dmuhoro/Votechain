@@ -45,3 +45,9 @@ export interface AuthSession {
   user: Voter;
   token: string;
 }
+
+export interface ElectionStats {
+  activeElections: number;
+  totalVotes: number;
+  registeredVoters: number;
+}

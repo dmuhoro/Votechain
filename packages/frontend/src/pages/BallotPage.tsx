@@ -11,7 +11,7 @@ import Card from '../components/ui/Card';
 const BallotPage: React.FC = () => {
   const { electionId } = useParams<{ electionId: string }>();
   const navigate = useNavigate();
-  const { castVote, isSubmitting } = useVote();
+  const { castVote, isSubmitting, error: voteError } = useVote();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -69,6 +69,12 @@ const BallotPage: React.FC = () => {
         {error && (
           <Card className="bg-red-900 border border-red-700 mb-8">
             <p className="text-red-200">{error}</p>
+          </Card>
+        )}
+
+        {voteError && (
+          <Card className="bg-red-900 border border-red-700 mb-8">
+            <p className="text-red-200">{voteError}</p>
           </Card>
         )}
 
