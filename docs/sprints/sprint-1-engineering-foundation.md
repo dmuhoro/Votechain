@@ -108,8 +108,9 @@ five gates on every push/PR.
   receipt → double-vote blocked at both boundaries), 13/13 PASS.
 - **Not yet proven:** Sepolia — no contract deployed to testnet, no hosted
   backend/frontend, no live smoke test. CI has not run on GitHub.
-- **Next (Sprint 2):** Sepolia deploy (env-var swap + funded relayer), then
-  Railway backend + Vercel frontend, then live smoke test. Grants migration is
-  manual-applied on live (20260916110000).
+- **Next (Sprint 2 → Sprint 2 file):** Deployment readiness (Dockerfile fix, vercel.json)
+  + vote-path hardening (Article II.3 nullifier reorder, 409 mapping, error states,
+  /api/stats). Sepolia deploy deferred to last (needs user credentials).
 - **Credentials held by the user** (live anon/service-role keys, Sepolia RPC,
   relayer & owner keys, Etherscan key) are required before the live-deploy steps.
+  Grants migration is manual-applied on live (20260916110000).
