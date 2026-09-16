@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { SEPOLIA_RPC_URL, RELAYER_PRIVATE_KEY, CONTRACT_ADDRESS } from "../config";
-import VoteChainArtifact from "../../contracts/artifacts/contracts/VoteChain.sol/VoteChain.json";
+import VoteChainArtifact from "../artifacts/VoteChain.json";
 import pino from "pino";
 
 const logger = pino();
@@ -86,7 +86,7 @@ class RelayerService {
         attempts++;
         logger.error(`Attempt ${attempts} failed to submit vote: ${error.message}`);
 
-        if (error.code === ethers.EthersError.UNPREDICTABLE_GAS_LIMIT || error.code === ethers.EthersError.REPLACEMENT_UNDERPRICED) {
+        if (error.code === "UNPREDICTABLE_GAS_LIMIT" || error.code === "REPLACEMENT_UNDERPRICED") {
           // If gas limit is unpredictable or transaction is underpriced, force refresh nonce
           this.nonce = undefined;
         }

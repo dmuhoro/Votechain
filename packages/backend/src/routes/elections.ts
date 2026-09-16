@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ethers } from 'ethers';
 import { supabase } from '../services/supabaseService';
 import { CONTRACT_ADDRESS, SEPOLIA_RPC_URL } from '../config';
-import VoteChainArtifact from '../../contracts/artifacts/contracts/VoteChain.sol/VoteChain.json';
+import VoteChainArtifact from '../artifacts/VoteChain.json';
 
 const router = Router();
 
@@ -17,7 +17,7 @@ const electionIdSchema = z.object({
 });
 
 // GET /api/elections - List all elections with status
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const { data: elections, error } = await supabase
       .from('elections')
@@ -117,18 +117,14 @@ router.get('/:id/candidates', async (req, res) => {
 
     const chainElectionId = election.chain_election_id;
 
-    // Fetch election details from smart contract to get candidate count
-    const [, , , , , candidateCount] = await voteChainContract.getElection(chainElectionId);
+    // Fetch candidates from the smart contract via getResults (names/parties)
+    const [names, parties] = await voteChainContract.getResults(chainElectionId);
 
-    const candidates = [];
-    for (let i = 1; i <= candidateCount; i++) {
-      const candidate = await voteChainContract.elections(chainElectionId).candidates(i);
-      candidates.push({
-        id: Number(candidate.id),
-        name: candidate.name,
-        party: candidate.party,
-      });
-    }
+    const candidates = names.map((name: string, index: number) => ({
+      id: index + 1,
+      name,
+      party: parties[index],
+    }));
 
     res.status(200).json(candidates);
   } catch (error: any) {

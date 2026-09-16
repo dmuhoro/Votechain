@@ -55,12 +55,12 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health Check
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'UP', timestamp: new Date().toISOString() });
 });
 
 // Not Found Handler
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((_req: Request, res: Response, _next: NextFunction) => {
   res.status(404).json({ message: 'Not Found' });
 });
 

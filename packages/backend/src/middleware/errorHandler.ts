@@ -4,7 +4,7 @@ import pino from 'pino';
 
 const logger = pino();
 
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error(err);
 
   if (err instanceof ZodError) {

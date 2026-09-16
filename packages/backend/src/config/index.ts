@@ -6,7 +6,9 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
   RELAYER_PRIVATE_KEY: z.string(),
+  OWNER_PRIVATE_KEY: z.string(),
   SEPOLIA_RPC_URL: z.string().url(),
+  SEPOLIA_EXPLORER: z.string().url().default("https://sepolia.etherscan.io"),
   CONTRACT_ADDRESS: z.string().startsWith("0x").length(42), // Ethereum address
   SERVER_SECRET: z.string().min(32), // For nullifier generation
   ADMIN_EMAILS: z.string().transform((str) => str.split(",").map((email) => email.trim())),
@@ -32,7 +34,9 @@ export const {
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
   RELAYER_PRIVATE_KEY,
+  OWNER_PRIVATE_KEY,
   SEPOLIA_RPC_URL,
+  SEPOLIA_EXPLORER,
   CONTRACT_ADDRESS,
   SERVER_SECRET,
   ADMIN_EMAILS,

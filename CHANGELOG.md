@@ -14,48 +14,55 @@
   ADR-001 (relayer pattern), ADR-002 (two-boundary nullifier), ADR-003 (key separation), ADR-004
   (deployment topology), sprint scaffold + evidence README.
 - **Backend build pipeline** — `packages/backend/tsconfig.json` (strict, outDir `dist`); vitest
-  harness; `.env.example` updated to the real contract (adds `OWNER_PRIVATE_KEY`, renames
-  `SEPOLIA_EXPLORER`).
-- **Hardening** — rate limit on `POST /auth/send-otp` (OTP flood guard); graceful nullifier release
-  on failed on-chain submission; `serverError` handling + loading states on Vote/Results/Receipt.
-- **Infra manifests** — backend `Dockerfile`, `railway.toml`, `vercel.json`, `procfile`; GitHub
-  Actions CI (`ci.yml`) running contract tests + frontend/backend builds on push/PR.
-- **Supabase schema as versioned migration** — `supabase/migrations/0000_initial_schema.sql`
-  (voters/elections/vote_records/nullifiers + RLS).
+  harness; `.env.example` updated to the real contract (adds `OWNER_PRIVATE_KEY`, `SEPOLIA_EXPLORER`).
+- **Hardening** — rate limit on `POST /auth/send-otp` (OTP flood guard).
+- **Infra manifests** — backend `Dockerfile` (multi-stage, Node 22 Alpine), `railway.toml`,
+  `vercel.json` (SPA rewrite), GitHub Actions CI (`ci.yml`) running contract tests + frontend/backend
+  builds on push/PR.
+- **Auth callback** — `AuthCallbackPage.tsx` + `/auth/callback` route; `authStore.initialize` now
+  restores the Supabase session on page load.
+- **Evidence** — `docs/evidence/2026-09-16_layer1-dependency-and-gates.md`,
+  `2026-09-16_runtime-bugs-and-infra.md`.
 
 ### Fixed
 
-- `react-router-dom` added to frontend deps (was imported but never declared → `TS2307` across 7 files).
-- `src/vite-env.d.ts` added (fixes 5× `TS2339 import.meta.env` errors).
-- Repo cruft removed: hardhat/etherscan/typechain deps stripped from frontend & backend, `vite`/`vitest`
-  stripped from contracts, `hardhat` pinned to `^2.22.15` (v3.7.0 did not exist), ethers pinned to `^6.13.4`.
-- Frontend type errors fixed: `VoteReceipt.timestamp` field added, unused imports/destructures removed.
-- Backend runtime bugs: admin routes now sign owner-gated calls with `OWNER_PRIVATE_KEY` (was relayer →
-  would revert `Only owner can call`); receipt handler `electionId` scope bug fixed; receipt/explorer now
-  use `SEPOLIA_EXPLORER` env not the web-only `VITE_` var; `@supabase/supabase-js` declared in backend deps.
-- `scripts/seed-election.ts` rewritten to the contract's real 6-arg `createElection` signature.
-- Backend `test` script no longer `exit 1` (now runs vitest).
+- **Dependency root cause:** `hardhat ^3.7.0` + `ethers ^5.8.0` across all packages — pinned to
+  `hardhat ^2.28.0`, `ethers ^6.14.0`; `hardhat-toolbox` pinned to `hh2` line (`6.1.2`); backend
+  had no `tsconfig.json` (created). `@vitejs/plugin-react` bumped to `^6.1.1` (vite-8 compatible).
+- **Vote-path runtime bugs:** admin routes now sign owner-gated calls with `OWNER_PRIVATE_KEY` (was
+  relayer → would revert `Only owner can call` on-chain); `electionId` out-of-scope ReferenceError
+  in `votes.ts:151` fixed; `transactionReceipt.timestamp` (ethers v5) replaced by block-fetch;
+  `ethers.EthersError.UNPREDICTABLE_GAS_LIMIT` (v5) replaced by string comparison; `elections()
+  .candidates()` v5-ism rewritten to `getResults()`.
+- `scripts/seed-election.ts` rewritten from 4-arg to the real 6-arg `createElection` signature.
+- `scripts/deploy.ts`: `ethers.network.name` (v5) → `provider.getNetwork()` (v6).
+- `src/vite-env.d.ts` added (fixes 5× `TS2339 import.meta.env` errors in frontend).
+- Unused imports / destructured vars cleaned across backend + frontend (strict TS pass).
+- `package-lock.json` regenerated to resolve root `ethers@5.8.0` stale snapshot.
 
 ### Tests
 
-- Contract: 15 tests green on local hardhat network (deploy, owner-only create/close, relayer-only vote,
-  duplicate-nullifier, invalid candidate, started/ended windows, relayer update).
-- Backend: unit suite (nullifier determinism/uniqueness, relayer nonce discipline) green via vitest.
-- Frontend: `tsc` + `vite build` green (lint clean via `eslint --max-warnings 0`).
+- Contract: **20 tests** green on local hardhat network (deploy, owner-only create/close, relayer-only
+  vote, duplicate-nullifier, invalid candidate, started/ended windows, relayer update, election
+  details, results, 6-arg seed).
+- Backend: unit suite for `nullifierService` (determinism, double-vote rejection, supabase read/write
+  error surfacing) — **6 tests** green via vitest.
+- Frontend: `tsc` + `vite build` + `eslint --max-warnings 0` all green.
 
 ### Verified
 
-- `npm run test -w contracts` → 15 passed
-- `npm run build -w backend` → emits `dist/`
-- `npm run build -w frontend` → `tsc && vite build` green
-- `npm run test -w backend` → vitest green
-- `npm run lint -w frontend` → 0 errors
-- `npm audit` still reports transitive advisories in the hardhat/toolbox chain (no non-breaking fix; see `docs/evidence/`)
+- `npm run test -w contracts` → 20 passed
+- `npm run build -w backend` → emits `dist/` without type errors
+- `npm run test -w backend` → 6 passed
+- `npm run build -w frontend` → `tsc && vite build` green (152 kB JS, 13 kB CSS)
+- `npm run lint -w frontend` → 0 warnings
 
 ### Documented
 
 - `docs/adr/*` (4 ADRs), `docs/sprints/README.md`, `docs/evidence/README.md`, `docs/architecture.md`,
   `docs/current-state.md`.
+- `docs/sprints/sprint-1-engineering-foundation.md` — sprint result, evidence table, honest
+  boundaries.
 
 ---
 

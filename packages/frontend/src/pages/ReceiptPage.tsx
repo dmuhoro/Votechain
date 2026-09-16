@@ -91,7 +91,7 @@ const ReceiptPage: React.FC = () => {
                   </div>
                   <div className="bg-gray-700 rounded-lg p-4">
                     <p className="text-gray-400 text-sm mb-1">Timestamp</p>
-                    <p className="text-lg font-semibold">{new Date(receipt.timestamp).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">{receipt.timestamp ? new Date(receipt.timestamp).toLocaleString() : 'N/A'}</p>
                   </div>
                 </div>
               </div>

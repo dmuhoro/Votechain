@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, run } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -23,7 +23,7 @@ async function main() {
     fs.mkdirSync(deploymentsDir);
   }
 
-  const network = ethers.network.name;
+  const network = (await ethers.provider.getNetwork()).name;
   const deploymentPath = path.join(deploymentsDir, `${network}.json`);
 
   const deploymentInfo = {

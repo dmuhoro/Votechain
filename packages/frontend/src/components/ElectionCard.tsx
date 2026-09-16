@@ -1,6 +1,6 @@
 import React from 'react';
 import { Election } from '../types';
-import { formatDate, getCountdown, isElectionActive } from '../lib/utils';
+import { getCountdown, isElectionActive } from '../lib/utils';
 import Card from './ui/Card';
 import Button from './ui/Button';
 

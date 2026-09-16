@@ -1,12 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useElectionStore } from '../store/electionStore';
-import { Election } from '../types';
 
 export const useElection = () => {
   const { elections, selectedElection, setElections, setSelectedElection, setIsLoading } = useElectionStore();
 
-  const fetchElections = async () => {
+  const fetchElections = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get('/api/elections');
@@ -16,9 +15,9 @@ export const useElection = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setElections, setIsLoading]);
 
-  const fetchElectionById = async (id: number) => {
+  const fetchElectionById = useCallback(async (id: number) => {
     try {
       setIsLoading(true);
       const response = await api.get(`/api/elections/${id}`);
@@ -28,11 +27,11 @@ export const useElection = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setSelectedElection, setIsLoading]);
 
   useEffect(() => {
     fetchElections();
-  }, []);
+  }, [fetchElections]);
 
   return {
     elections,

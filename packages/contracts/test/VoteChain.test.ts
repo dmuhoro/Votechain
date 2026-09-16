@@ -113,10 +113,8 @@ describe("VoteChain", function () {
         .to.emit(voteChain, "VoteCast")
         .withArgs(electionId, candidateId, nullifier);
 
-      const election = await voteChain.elections(electionId);
-      const candidate = await election.candidates(candidateId);
-      expect(candidate.voteCount).to.equal(1);
-      expect(election.nullifiers[nullifier]).to.be.true;
+      const results = await voteChain.getResults(electionId);
+      expect(results.voteCounts[candidateId - 1]).to.equal(1n);
     });
 
     it("Should reject duplicate nullifier (double vote attempt)", async function () {

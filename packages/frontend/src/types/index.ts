@@ -38,6 +38,7 @@ export interface VoteReceipt {
   electionTitle: string;
   candidateVotedFor: string;
   candidateParty: string;
+  timestamp: string | null;
 }
 
 export interface AuthSession {

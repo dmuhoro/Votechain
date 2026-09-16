@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { supabase } from '../services/supabaseService';
 import { protect } from '../middleware/authMiddleware';
 import { Request, Response } from 'express';
@@ -22,11 +23,19 @@ const sendOtpSchema = z.object({
   email: z.string().email(),
 });
 
-router.post("/send-otp", async (req: Request, res: Response) => {
+router.post("/send-otp",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many OTP requests. Please try again later." },
+  }),
+  async (req: Request, res: Response) => {
   try {
     const { email } = sendOtpSchema.parse(req.body);
 
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: process.env.CORS_ORIGIN, // Redirect back to frontend after magic link click
@@ -100,7 +109,7 @@ router.post("/register-voter", protect, async (req: AuthenticatedRequest, res: R
     const nationalIdHash = crypto.createHash("sha256").update(nationalId).digest("hex");
 
     // Check if voter already exists
-    const { data: existingVoter, error: fetchError } = await supabase
+    const { data: existingVoter } = await supabase
       .from("voters")
       .select("id")
       .eq("email", email)

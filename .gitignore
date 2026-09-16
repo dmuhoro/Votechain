@@ -18,6 +18,13 @@ packages/contracts/cache/
 packages/contracts/typechain-types/
 packages/contracts/deployments/
 
+# Backend synced artifact (generated from contracts compile)
+packages/backend/src/artifacts/
+
+# Vitest transpile artifacts in test dirs
+packages/*/test/**/*.js
+packages/*/test/**/*.js.map
+
 # Coverage
 coverage/
 lcov.info

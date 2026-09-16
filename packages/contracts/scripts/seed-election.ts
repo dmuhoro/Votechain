@@ -14,18 +14,25 @@ async function main() {
 
   const title = "General Election 2027 - Presidential";
   const description = "The 2027 Kenyan General Election for the office of the President.";
-  const candidates = [
-    { name: "Candidate A", party: "Party Alpha" },
-    { name: "Candidate B", party: "Party Beta" },
-    { name: "Candidate C", party: "Party Gamma" },
-  ];
-  const duration = 60 * 60 * 24 * 7; // 1 week
+  const candidateNames = ["Candidate A", "Candidate B", "Candidate C"];
+  const candidateParties = ["Party Alpha", "Party Beta", "Party Gamma"];
+
+  const blockNum = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNum);
+  if (!block) {
+    throw new Error("Could not read current block");
+  }
+
+  const startTime = block.timestamp + 60;
+  const endTime = startTime + 60 * 60 * 24 * 7; // 1 week
 
   const tx = await voteChain.createElection(
     title,
     description,
-    candidates,
-    duration
+    candidateNames,
+    candidateParties,
+    startTime,
+    endTime
   );
 
   await tx.wait();

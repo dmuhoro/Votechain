@@ -1,12 +1,12 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { z } from 'zod';
 import { protect } from '../middleware/authMiddleware';
 import { relayerService } from '../services/relayerService';
 import { generateNullifier, checkAndStoreNullifier } from '../services/nullifierService';
 import { supabase } from '../services/supabaseService';
 import { ethers } from 'ethers';
-import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS } from '../config';
-import VoteChainArtifact from '../../contracts/artifacts/contracts/VoteChain.sol/VoteChain.json';
+import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS, SEPOLIA_EXPLORER } from '../config';
+import VoteChainArtifact from '../artifacts/VoteChain.json';
 
 const router = Router();
 
@@ -19,7 +19,6 @@ interface AuthenticatedRequest extends Request {
     is_verified_voter: boolean;
   };
 }
-
 // Initialize ethers provider and contract for read-only operations
 const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
 const voteChainContract = new ethers.Contract(CONTRACT_ADDRESS, VoteChainArtifact.abi, provider);
@@ -76,7 +75,7 @@ router.post('/cast', protect, async (req: AuthenticatedRequest, res) => {
       message: 'Vote cast successfully',
       txHash,
       blockNumber,
-      explorerUrl: `${process.env.VITE_SEPOLIA_EXPLORER}/tx/${txHash}`,
+      explorerUrl: `${SEPOLIA_EXPLORER}/tx/${txHash}`,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -148,14 +147,17 @@ router.get('/receipt/:txHash', async (req, res) => {
     let candidateParty = 'Unknown';
     if (candidateId !== null) {
       try {
-        const electionDetails = await voteChainContract.elections(electionId);
-        const candidate = await electionDetails.candidates(candidateId);
-        candidateName = candidate.name;
-        candidateParty = candidate.party;
+        const [names, parties] = await voteChainContract.getResults(voteRecord.election_id);
+        const index = Number(candidateId) - 1;
+        candidateName = names[index] || 'Unknown';
+        candidateParty = parties[index] || 'Unknown';
       } catch (e) {
         console.error('Error fetching candidate details from contract:', e);
       }
     }
+
+    const block = await provider.getBlock(transactionReceipt.blockNumber);
+    const receiptTimestamp = block ? new Date(block.timestamp * 1000).toISOString() : null;
 
     res.status(200).json({
       message: 'Vote verified successfully',
@@ -166,8 +168,8 @@ router.get('/receipt/:txHash', async (req, res) => {
       txHash: voteRecord.tx_hash,
       blockNumber: voteRecord.block_number,
       nullifierHash: voteRecord.nullifier_hash,
-      timestamp: new Date(transactionReceipt.timestamp * 1000).toISOString(), // Assuming timestamp is available in receipt
-      explorerUrl: `${process.env.VITE_SEPOLIA_EXPLORER}/tx/${txHash}`,
+      timestamp: receiptTimestamp,
+      explorerUrl: `${SEPOLIA_EXPLORER}/tx/${txHash}`,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

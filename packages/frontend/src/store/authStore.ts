@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { Voter } from '../types';
 
 interface AuthStore {
@@ -30,11 +31,30 @@ export const useAuthStore = create<AuthStore>((set) => ({
     localStorage.removeItem('authToken');
     set({ user: null, token: null });
   },
-  initialize: () => {
+  initialize: async () => {
     const token = localStorage.getItem('authToken');
     if (token) {
       set({ token });
     }
+
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+
+    if (session) {
+      const { user } = session;
+      localStorage.setItem('authToken', session.access_token);
+      set({
+        token: session.access_token,
+        user: {
+          id: user.id,
+          email: user.email || '',
+          is_verified: false,
+          is_admin: false,
+          needsRegistration: true,
+        },
+      });
+    }
+
     set({ isLoading: false });
   },
 }));

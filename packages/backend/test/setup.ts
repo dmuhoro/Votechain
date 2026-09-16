@@ -1,0 +1,11 @@
+process.env.NODE_ENV = "test";
+process.env.PORT = "3001";
+process.env.SUPABASE_URL = "http://localhost:54321";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+process.env.RELAYER_PRIVATE_KEY = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.OWNER_PRIVATE_KEY = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0";
+process.env.SEPOLIA_RPC_URL = "http://localhost:8545";
+process.env.CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000001";
+process.env.SERVER_SECRET = "test-secret-that-is-at-least-thirty-two-chars";
+process.env.ADMIN_EMAILS = "admin@votechain.test";
+process.env.CORS_ORIGIN = "http://localhost:5173";

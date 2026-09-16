@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import api from '../lib/api';
 import { ElectionResult } from '../types';
 
@@ -8,9 +8,8 @@ export const useResults = (electionId: number | null) => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchResults = async () => {
+  const fetchResults = useCallback(async () => {
     if (!electionId) return;
-
     try {
       setIsLoading(true);
       setError(null);
@@ -24,13 +23,13 @@ export const useResults = (electionId: number | null) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [electionId, setIsLoading, setError, setResults, setLastUpdated]);
 
   useEffect(() => {
     fetchResults();
-    const interval = setInterval(fetchResults, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchResults, 30000);
     return () => clearInterval(interval);
-  }, [electionId]);
+  }, [fetchResults]);
 
   return {
     results,

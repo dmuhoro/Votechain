@@ -2,17 +2,18 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { adminProtect, protect } from '../middleware/authMiddleware';
 import { supabase } from '../services/supabaseService';
-import { relayerService } from '../services/relayerService';
 import { ethers } from 'ethers';
-import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS } from '../config';
-import VoteChainArtifact from '../../contracts/artifacts/contracts/VoteChain.sol/VoteChain.json';
+import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS, OWNER_PRIVATE_KEY } from '../config';
+import VoteChainArtifact from '../artifacts/VoteChain.json';
 
 const router = Router();
 
-// Initialize ethers provider and contract for admin operations
+// Initialize ethers provider and contract for admin operations.
+// Owner-only calls (createElection, closeElection, updateRelayer) MUST be
+// signed by the owner key (ADR-003 key separation), never the relayer key.
 const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
-const relayerWallet = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY!, provider);
-const voteChainContract = new ethers.Contract(CONTRACT_ADDRESS, VoteChainArtifact.abi, relayerWallet); // Use relayer wallet for admin actions on contract
+const ownerWallet = new ethers.Wallet(OWNER_PRIVATE_KEY, provider);
+const voteChainContract = new ethers.Contract(CONTRACT_ADDRESS, VoteChainArtifact.abi, ownerWallet);
 
 // Schema for creating an election
 const createElectionSchema = z.object({
@@ -152,7 +153,7 @@ router.post('/elections/:id/close', protect, adminProtect, async (req, res) => {
 });
 
 // GET /api/admin/voters - List registered voters with verification status
-router.get('/voters', protect, adminProtect, async (req, res) => {
+router.get('/voters', protect, adminProtect, async (_req, res) => {
   try {
     const { data: voters, error } = await supabase
       .from('voters')
