@@ -54,3 +54,6 @@ packages/frontend/.vite/
 
 # Supabase local
 .supabase/
+
+# Vercel CLI local state (project link)
+.vercel

@@ -26,7 +26,9 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "",
-      accounts: process.env.RELAYER_PRIVATE_KEY !== undefined ? [process.env.RELAYER_PRIVATE_KEY] : [],
+      // The deployer is the OWNER (not the relayer) per ADR-003. The deploy script
+      // then passes RELAYER_ADDRESS to the constructor, keeping owner != relayer.
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
   gasReporter: {
