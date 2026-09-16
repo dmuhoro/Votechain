@@ -21,6 +21,7 @@ manifests, and honest engineering evidence.
 | Frontend build + lint (0 warnings) | ✅ | 2026-09-16_layer1-dependency-and-gates.md |
 | Vote-path runtime bugs fixed | ✅ | 2026-09-16_runtime-bugs-and-infra.md |
 | Dev/CI infra present (Railway, Vercel, Actions) | ✅ | 2026-09-16_runtime-bugs-and-infra.md |
+| Live Supabase schema verified + migration tracked | ✅ | 2026-09-16_supabase-migration-live.md |
 
 ## Part sections
 

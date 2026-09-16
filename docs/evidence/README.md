@@ -21,3 +21,4 @@ A `PASS` requires a cited test or cited manual step — never narrative alone.
 |------|---------|------|
 | `2026-09-16_layer1-dependency-and-gates.md` | PASS | 2026-09-16 |
 | `2026-09-16_runtime-bugs-and-infra.md` | PASS | 2026-09-16 |
+| `2026-09-16_supabase-migration-live.md` | PASS | 2026-09-16 |

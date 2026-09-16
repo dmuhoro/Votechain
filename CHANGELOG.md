@@ -21,6 +21,8 @@
   builds on push/PR.
 - **Auth callback** — `AuthCallbackPage.tsx` + `/auth/callback` route; `authStore.initialize` now
   restores the Supabase session on page load.
+- **Supabase schema as versioned migration** — `supabase/migrations/20260916102353_initial_schema.sql`
+  (voters/elections/vote_records/nullifiers + RLS); applied/recorded on the live project.
 - **Evidence** — `docs/evidence/2026-09-16_layer1-dependency-and-gates.md`,
   `2026-09-16_runtime-bugs-and-infra.md`.
 
