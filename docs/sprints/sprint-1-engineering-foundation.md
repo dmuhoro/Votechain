@@ -22,6 +22,7 @@ manifests, and honest engineering evidence.
 | Vote-path runtime bugs fixed | ✅ | 2026-09-16_runtime-bugs-and-infra.md |
 | Dev/CI infra present (Railway, Vercel, Actions) | ✅ | 2026-09-16_runtime-bugs-and-infra.md |
 | Live Supabase schema verified + migration tracked | ✅ | 2026-09-16_supabase-migration-live.md |
+| Local End-to-End vote path proven (13/13) — Layer 2 | ✅ | 2026-09-16_layer2-local-vote-path.md |
 
 ## Part sections
 
@@ -102,11 +103,13 @@ five gates on every push/PR.
 
 ## Honest boundaries / Next steps
 
-- **Not yet proven:** live end-to-end vote (Supabase identity + chain + relay).
-  CI has not run on GitHub; Actions YAML is unexercised. No contract is deployed
-  to Sepolia; no backend/frontend is hosted.
-- **Next (Sprint 2):** apply `supabase/migrations` to the live Supabase project,
-  prove the real vote path locally (hardhat node + live Supabase), then Sepolia
-  deploy + Railway/Vercel hosting.
-- **Credentials held by the user** (anon/service-role keys, Sepolia RPC, relayer &
-  owner keys, Etherscan key) are required before the live-deploy steps.
+- **Proven:** live end-to-end vote path works against the **local** stack (OTP
+  auth → registration → admin-verified → on-chain election → relayer cast →
+  receipt → double-vote blocked at both boundaries), 13/13 PASS.
+- **Not yet proven:** Sepolia — no contract deployed to testnet, no hosted
+  backend/frontend, no live smoke test. CI has not run on GitHub.
+- **Next (Sprint 2):** Sepolia deploy (env-var swap + funded relayer), then
+  Railway backend + Vercel frontend, then live smoke test. Grants migration is
+  manual-applied on live (20260916110000).
+- **Credentials held by the user** (live anon/service-role keys, Sepolia RPC,
+  relayer & owner keys, Etherscan key) are required before the live-deploy steps.

@@ -1,5 +1,6 @@
 # VoteChain — Execution Plan: Scaffold → Live Sepolia Demo
 
+> Status: **Phase 1 (local E2E proof) GREEN — 13/13 PASS.** Next: Phase 2 (Sepolia mirror).
 > Source of truth for "what's broken": `AUDIT.md`
 > Strategy: **prove the flow locally FIRST, then mirror to Sepolia, then host.**
 
@@ -36,7 +37,7 @@ Goal: `npm install`, frontend `tsc+build`, backend `tsc+build`, `hardhat compile
 
 ---
 
-## Phase 1 — Local E2E proof (~3–4 hours, me)
+## Phase 1 — Local E2E proof (DONE — 13/13 PASS)
 
 Goal: **a stranger-shaped user can, on localhost, register → get verified → vote → see results read from the chain.** No cloud infrastructure other than Supabase's free tier.
 
@@ -50,7 +51,7 @@ Goal: **a stranger-shaped user can, on localhost, register → get verified → 
 | 1.6 | Register a voter, admin-verify them, create an election via admin (owner wallet), cast a real vote via relayer, read results from contract | Full happy path green on localhost |
 | 1.7 | Negative tests on localhost: double-vote rejected, non-verified voter rejected, unauthenticated rejected | 3 manual checks pass |
 
-**Exit gate:** end-to-end vote works on localhost with the on-chain nullifier + results both proving the vote. This is the "does it actually work" gate — nothing beyond this is done until this is green.
+**Exit gate:** ✅ GATE MET — end-to-end vote works on localhost with on-chain nullifier + results. Evidence: `docs/evidence/2026-09-16_layer2-local-vote-path.md` (13/13 PASS).
 
 ---
 
@@ -101,12 +102,12 @@ Only what a stranger could break or what the demo will be judged on:
 ## P0 Timeline (honest)
 
 ```
-Day 1  (≈6h):  Phase 0 build fixes → Phase 1 local E2E green  ← the real gate
-Day 2  (≈4h):  Phase 2 Sepolia → Phase 3 hosting → smoke test
+Day 1  (≈6h):  Phase 0 build fixes → Phase 1 local E2E green   ✅ DONE (13/13)
+Day 2  (≈4h):  Phase 2 Sepolia → Phase 3 hosting → smoke test   ← NEXT (needs user creds)
 Day 2.5 (≈2h): Phase 4 hardening
 ```
 
-**~12 focused hours to a live, shareable Sepolia demo**, gated entirely by whether Phase 1 goes green. If something in Phase 1 breaks in an unexpected way (e.g. Supabase RLS or ethers behavior), that's where the range widens — not in the deployment itself.
+**~12 focused hours to a live, shareable Sepolia demo**, gated by Phase 1 (now green) and then by user-held credentials (live keys, funded relayer wallet) for Phase 2.
 
 ---
 
@@ -120,6 +121,6 @@ Day 2.5 (≈2h): Phase 4 hardening
 | In my hands | Only you can do |
 |-------------|-----------------|
 | All code, configs, deploy manifests, SQL, fixes | Create Supabase project + hand over keys |
-| Local E2E verification | Fund Sepolia relayer wallet |
+| ~~Local E2E verification~~ ✅ DONE (13/13) | Fund Sepolia relayer wallet |
 | Rendering/hosting configs | Hosting account creation (or credentials so I can) |
 | Demo URL + env wiring | Final domain choice |
