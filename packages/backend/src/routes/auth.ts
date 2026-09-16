@@ -1,12 +1,22 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseService';
 import { protect } from '../middleware/authMiddleware';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '../config';
 import { Request, Response } from 'express';
 import * as crypto from 'crypto';
 
 const router = Router();
+
+// Dedicated client for user-facing auth flows. Kept separate from the shared
+// service-role client (`supabase`) because verifyOtp stores the user session in
+// memory; if it ran on the shared client, every subsequent .from() write would
+// authenticate as `authenticated` (Bearer user token) instead of service_role.
+const authSupabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 // Extend Request type for authenticated user
 interface AuthenticatedRequest extends Request {
@@ -26,7 +36,7 @@ const sendOtpSchema = z.object({
 router.post("/send-otp",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many OTP requests. Please try again later." },
@@ -35,7 +45,7 @@ router.post("/send-otp",
   try {
     const { email } = sendOtpSchema.parse(req.body);
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await authSupabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: process.env.CORS_ORIGIN, // Redirect back to frontend after magic link click
@@ -55,24 +65,31 @@ router.post("/send-otp",
   }
 });
 
-// Schema for verifying OTP (not directly used for magic link, but good for consistency)
+// Schema for verifying OTP. Accepts either a numeric OTP code (e.g. 6 digits) or
+// the token from a Supabase magic-link email (often 40-60 chars). We try the
+// Schema for verifying OTP. Accepts either a numeric OTP code (e.g. 6 digits) or
+// the token from a Supabase magic-link email (40-60 chars, consumed on use).
 const verifyOtpSchema = z.object({
   email: z.string().email(),
-  token: z.string().min(6).max(6), // Assuming 6 digit OTP
+  token: z.string().min(6), // Minimum 6; magic-link tokens are longer
 });
 
-// Note: Supabase magic link handles verification automatically on redirect.
-// This endpoint would be for a traditional OTP flow, which is not the primary method here.
-// Keeping it as a placeholder if a direct OTP entry is desired later.
 router.post("/verify-otp", async (req: Request, res: Response) => {
   try {
     const { email, token } = verifyOtpSchema.parse(req.body);
 
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: "email",
-    });
+    // Modern GoTrue (v2.195+) stores magic-link tokens in `one_time_tokens` and
+    // requires verifying via `token_hash` (no `email`/`token`). The `{email,
+    // token}` path only matches legacy `users.confirmation_token`/`recovery_token`
+    // columns, which are empty in the new scheme. Numeric OTPs (6-digit) still
+    // verify via `{email, token, type: "email"}`.
+    const isMagicLink = token.length > 6;
+
+    const { data, error } = await authSupabase.auth.verifyOtp(
+      isMagicLink
+        ? { token_hash: token, type: "magiclink" }
+        : { email, token, type: "email" }
+    );
 
     if (error) {
       return res.status(400).json({ message: error.message });
