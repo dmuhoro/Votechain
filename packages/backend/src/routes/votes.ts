@@ -41,15 +41,33 @@ router.post('/cast', protect, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ message: 'Voter is not verified.' });
     }
 
-    // 1. Generate nullifier
+    // 0. Translate Supabase DB election id to on-chain election id.
+    // The frontend addresses elections by the Supabase `elections.id` serial,
+    // but VoteChain.sol keys elections by `chain_election_id` (its own counter).
+    // Using the DB id as a chain id only works by coincidence when both start at 1.
+    const { data: electionRow, error: electionError } = await supabase
+      .from('elections')
+      .select('chain_election_id')
+      .eq('id', electionId)
+      .single();
+
+    if (electionError || !electionRow) {
+      if (electionError && electionError.code === 'PGRST116') {
+        return res.status(404).json({ message: 'Election not found in database.' });
+      }
+      return res.status(500).json({ message: electionError?.message || 'Failed to resolve election.' });
+    }
+    const chainElectionId = electionRow.chain_election_id;
+
+    // 1. Generate nullifier (deterministic per voter + election)
     const nullifier = generateNullifier(req.user.id, electionId);
 
-    // 2. Check nullifier not in nullifiers table (fast pre-check)
+    // 2. Check nullifier not in nullifiers table (fast pre-check, keyed by DB election id)
     await checkAndStoreNullifier(electionId, nullifier);
 
-    // 3. Submit transaction via relayerService
+    // 3. Submit transaction via relayerService with the chain-facing election id
     const { txHash, blockNumber } = await relayerService.submitVote(
-      electionId,
+      chainElectionId,
       candidateId,
       nullifier
     );
@@ -147,10 +165,19 @@ router.get('/receipt/:txHash', async (req, res) => {
     let candidateParty = 'Unknown';
     if (candidateId !== null) {
       try {
-        const [names, parties] = await voteChainContract.getResults(voteRecord.election_id);
-        const index = Number(candidateId) - 1;
-        candidateName = names[index] || 'Unknown';
-        candidateParty = parties[index] || 'Unknown';
+        // Translate DB election id to the on-chain election id before reading results
+        const { data: electionForChain } = await supabase
+          .from('elections')
+          .select('chain_election_id')
+          .eq('id', voteRecord.election_id)
+          .single();
+        const chainElectionId = electionForChain?.chain_election_id;
+        if (chainElectionId !== undefined) {
+          const [names, parties] = await voteChainContract.getResults(chainElectionId);
+          const index = Number(candidateId) - 1;
+          candidateName = names[index] || 'Unknown';
+          candidateParty = parties[index] || 'Unknown';
+        }
       } catch (e) {
         console.error('Error fetching candidate details from contract:', e);
       }
