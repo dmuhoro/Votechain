@@ -5,9 +5,64 @@
 
 ---
 
-## [Unreleased] — Sprint 1 — Engineering Foundation + Deployment Readiness
+## [Unreleased]
 
-### Added
+### Sprint 2 — Hardening and Readiness
+
+#### Added
+
+- **`/api/stats` endpoint** — returns `activeElections`, `totalVotes`, `registeredVoters` via
+  count queries on Supabase. Landing page now shows live stats with loading skeleton and error
+  fallback (`2026-09-16_layer4-vote-path-hardening.md`).
+- **`OTP_RATE_LIMIT` env** — configurable per-IP send-otp rate limit; default `5` per 15 min
+  (conservative, per Article IV.4).
+- **`coderabbit.yaml`** — assertive PR review profile, auto-review on main; install requires
+  user's GitHub click at https://github.com/apps/coderabbit/installations/new.
+- **`.dockerignore`** — excludes node_modules/artifacts/cache/dist from Docker build context.
+- **`nullifierService.isAlreadyVotedError()`** — detects the contract `"Already voted"` revert
+  string from ethers and maps to HTTP 409.
+
+#### Fixed
+
+- **Article II.3 nullifier-burn bug (CRITICAL):** `checkAndStoreNullifier` inserted the DB nullifier
+  row BEFORE `relayerService.submitVote`. A failed on-chain tx permanently locked the voter out.
+  Fixed by splitting into `checkNullifier` (SELECT only) and `storeNullifier` (upsert with
+  `onConflict: 'nullifier_hash', ignoreDuplicates: true`), reordered after on-chain success.
+- **On-chain double-vote mapped to 409:** contract revert `"Already voted"` now returns HTTP 409
+  with explicit message (was 500), satisfying Article I.6 (no silent drops).
+- **Config zod defaults were dead:** `envSchema.parse(process.env)` result was discarded;
+  `process.env` was destructured directly, so all zod defaults (SEPOLIA_EXPLORER, OTP_RATE_LIMIT)
+  never applied. Now destructures the parse result.
+- **Dockerfile was broken:** did not copy `hardhat.config.ts`; `npx hardhat compile` failed in the
+  build stage. Now copies the full `packages/contracts` tree. Also removed copy of non-existent
+  `packages/backend/node_modules` (workspace hoisting puts deps at root).
+- **vercel.json monorepo:** added `rootDirectory: "packages/frontend"` — without it, Vercel would
+  look for `dist` at repo root, not `packages/frontend/dist`.
+
+#### Changed
+
+- **Error/loading states on frontend pages:** ElectionsPage shows spinner + retry on error;
+  BallotPage surfaces `useVote` error in a red card; ResultsPage shows error + retry button.
+- **OTP rate limit** on `/auth/send-otp`: changed from hardcoded `limit: 100` to
+  `limit: OTP_RATE_LIMIT` (configurable, default 5).
+
+#### Verified
+
+- `npm run test -w contracts` → 20 passed
+- `npm run build -w backend` → `tsc` clean
+- `npm run test -w backend` → **8 passed** (was 6; new upsert + isAlreadyVotedError tests)
+- `npm run build -w frontend` → `tsc && vite build` green
+- `npm run lint -w frontend` → 0 warnings
+- Full 13/13 e2e re-run after Article II.3 fix → all pass
+- Docker build → `votechain-backend:layer3` image boots with `/api/health = 200`
+- `npm audit`: 45 vulns (all dev/build toolchain); runtime deps clean (axios, express, vite,
+  zod, ethers, supabase-js, recharts — zero vulnerabilities)
+
+---
+
+### Sprint 1 — Engineering Foundation + Deployment Readiness
+
+#### Added
 
 - **Engineering governance stack** — `docs/engineering/CONSTITUTION.md` (8 Articles, vote-integrity
   invariant), root `AGENTS.md` (10 hard rules for agents), `docs/architecture.md`, `docs/current-state.md`,
