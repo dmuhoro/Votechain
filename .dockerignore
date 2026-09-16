@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/artifacts
+**/cache
+**/typechain-types
+**/deployments
+**/coverage
+**/.vite
+
+.git
+.gitignore
+.env
+.env.*
+.supabase
+
+*.log
+*.tsbuildinfo
