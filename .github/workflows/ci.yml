@@ -60,4 +60,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint -w frontend
-      - run: npm run build -w frontend
+      - name: Build frontend
+        env:
+          VITE_SUPABASE_URL: http://localhost:54321
+          VITE_SUPABASE_ANON_KEY: anon-key
+          VITE_API_URL: http://localhost:3001
+          VITE_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000001"
+          VITE_SEPOLIA_EXPLORER: https://sepolia.etherscan.io
+        run: npm run build -w frontend
