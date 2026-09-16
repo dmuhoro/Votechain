@@ -13,19 +13,22 @@ const envSchema = z.object({
   SERVER_SECRET: z.string().min(32), // For nullifier generation
   ADMIN_EMAILS: z.string().transform((str) => str.split(",").map((email) => email.trim())),
   CORS_ORIGIN: z.string().url(),
+  OTP_RATE_LIMIT: z.coerce.number().int().positive().default(5),
 });
-
-try {
-  envSchema.parse(process.env);
-} catch (error) {
-  console.error("❌ Invalid environment variables:", error);
-  process.exit(1);
-}
 
 declare global {
   namespace NodeJS {
     interface ProcessEnv extends z.infer<typeof envSchema> {}
   }
+}
+
+let env: z.infer<typeof envSchema>;
+
+try {
+  env = envSchema.parse(process.env);
+} catch (error) {
+  console.error("❌ Invalid environment variables:", error);
+  throw new Error("Invalid environment variables - refusing to boot (Article IV.2).");
 }
 
 export const {
@@ -41,4 +44,5 @@ export const {
   SERVER_SECRET,
   ADMIN_EMAILS,
   CORS_ORIGIN,
-} = process.env;
+  OTP_RATE_LIMIT,
+} = env;

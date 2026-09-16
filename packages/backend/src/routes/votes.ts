@@ -2,7 +2,12 @@ import { Router, Request } from 'express';
 import { z } from 'zod';
 import { protect } from '../middleware/authMiddleware';
 import { relayerService } from '../services/relayerService';
-import { generateNullifier, checkAndStoreNullifier } from '../services/nullifierService';
+import {
+  generateNullifier,
+  checkNullifier,
+  storeNullifier,
+  isAlreadyVotedError,
+} from '../services/nullifierService';
 import { supabase } from '../services/supabaseService';
 import { ethers } from 'ethers';
 import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS, SEPOLIA_EXPLORER } from '../config';
@@ -62,15 +67,40 @@ router.post('/cast', protect, async (req: AuthenticatedRequest, res) => {
     // 1. Generate nullifier (deterministic per voter + election)
     const nullifier = generateNullifier(req.user.id, electionId);
 
-    // 2. Check nullifier not in nullifiers table (fast pre-check, keyed by DB election id)
-    await checkAndStoreNullifier(electionId, nullifier);
+    // 2. Fast pre-check: nullifier must not already be recorded (Article II.2 boundary a)
+    await checkNullifier(electionId, nullifier);
 
-    // 3. Submit transaction via relayerService with the chain-facing election id
-    const { txHash, blockNumber } = await relayerService.submitVote(
-      chainElectionId,
-      candidateId,
-      nullifier
-    );
+    // 3. Submit transaction via relayerService with the chain-facing election id.
+    //    Article II.3: the nullifier DB row is written ONLY after the on-chain
+    //    submission succeeds, so a failed chain transaction can be retried
+    //    without permanently burning the nullifier.
+    let txHash: string;
+    let blockNumber: number;
+    try {
+      ({ txHash, blockNumber } = await relayerService.submitVote(
+        chainElectionId,
+        candidateId,
+        nullifier
+      ));
+    } catch (error: any) {
+      if (isAlreadyVotedError(error)) {
+        return res.status(409).json({ message: 'Voter has already cast a vote in this election.' });
+      }
+      throw error;
+    }
+
+    // 3b. Record the nullifier now that the vote is on-chain (Article II.2 boundary a,
+    //     race-safe via ON CONFLICT DO NOTHING backstop). If this write fails, the
+    //     on-chain nullifier mapping (boundary b, authoritative) still blocks a replay.
+    try {
+      await storeNullifier(electionId, nullifier);
+    } catch (nullifierError) {
+      console.error(
+        'Failed to store nullifier in DB after on-chain success (chain still guards):',
+        nullifierError
+      );
+      res.set('X-VoteChain-Nullifier-Db-Warning', 'true');
+    }
 
     // 4. Store vote_record in Supabase
     const { error: voteRecordError } = await supabase
@@ -98,6 +128,9 @@ router.post('/cast', protect, async (req: AuthenticatedRequest, res) => {
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
+    }
+    if (error.statusCode === 409) {
+      return res.status(409).json({ message: error.message || 'Voter has already cast a vote in this election.' });
     }
     console.error('Error casting vote:', error);
     res.status(500).json({ message: error.message || 'Failed to cast vote' });

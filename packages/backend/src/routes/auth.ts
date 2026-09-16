@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseService';
 import { protect } from '../middleware/authMiddleware';
-import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from '../config';
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OTP_RATE_LIMIT } from '../config';
 import { Request, Response } from 'express';
 import * as crypto from 'crypto';
 
@@ -36,7 +36,7 @@ const sendOtpSchema = z.object({
 router.post("/send-otp",
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 100,
+    limit: OTP_RATE_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many OTP requests. Please try again later." },

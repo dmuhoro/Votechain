@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateNullifier } from "../src/services/nullifierService";
+import {
+  generateNullifier,
+  checkNullifier,
+  storeNullifier,
+  isAlreadyVotedError,
+} from "../src/services/nullifierService";
 
 vi.mock("../src/services/supabaseService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/services/supabaseService")>();
@@ -9,7 +14,7 @@ vi.mock("../src/services/supabaseService", async (importOriginal) => {
   };
 });
 
-import * as nullifierService from "../src/services/nullifierService";
+const nullifierService = await import("../src/services/nullifierService");
 import { supabase } from "../src/services/supabaseService";
 
 type SupabaseStub = { from: (table: string) => unknown };
@@ -24,16 +29,18 @@ function mockSupabase({ existing, insertError, fetchCode }: {
     error: fetchCode ? { code: fetchCode } : null,
   });
   const insert = vi.fn().mockResolvedValue({ error: insertError ?? null });
+  const upsert = vi.fn().mockResolvedValue({ error: insertError ?? null });
 
   const from = vi.fn(() => ({
     select: () => ({
       eq: () => ({ eq: () => ({ single: fetchSingle }) }),
     }),
     insert,
+    upsert,
   }));
 
   (supabase as unknown as SupabaseStub).from = from;
-  return { from, insert, fetchSingle };
+  return { from, insert, upsert, fetchSingle };
 }
 
 describe("nullifierService", () => {
@@ -56,31 +63,46 @@ describe("nullifierService", () => {
     expect(byElection).not.toBe(otherVoter);
   });
 
-  it("checkAndStoreNullifier rejects an already-used nullifier", async () => {
+  it("checkNullifier rejects an already-used nullifier", async () => {
     const { insert } = mockSupabase({ existing: { id: "row" } });
-    await expect(nullifierService.checkAndStoreNullifier(1, "0xabc")).rejects.toThrow(
+    await expect(nullifierService.checkNullifier(1, "0xabc")).rejects.toThrow(
       "already cast a vote"
     );
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it("checkAndStoreNullifier stores the nullifier when not yet used", async () => {
+  it("checkNullifier passes (no throw) when nullifier is not yet used", async () => {
     const { insert } = mockSupabase({ existing: null, fetchCode: "PGRST116" });
-    await nullifierService.checkAndStoreNullifier(1, "0xabc");
-    expect(insert).toHaveBeenCalledWith({ election_id: 1, nullifier_hash: "0xabc" });
+    await expect(nullifierService.checkNullifier(1, "0xabc")).resolves.toBeUndefined();
+    expect(insert).not.toHaveBeenCalled();
   });
 
-  it("checkAndStoreNullifier surfaces supabase read errors (non empty-set)", async () => {
+  it("checkNullifier surfaces supabase read errors (non empty-set)", async () => {
     mockSupabase({ existing: null, fetchCode: "ECONNREFUSED" });
-    await expect(nullifierService.checkAndStoreNullifier(1, "0xabc")).rejects.toThrow(
+    await expect(nullifierService.checkNullifier(1, "0xabc")).rejects.toThrow(
       "Error checking nullifier"
     );
   });
 
-  it("checkAndStoreNullifier surfaces supabase insert errors", async () => {
-    mockSupabase({ existing: null, fetchCode: "PGRST116", insertError: { message: "dup" } });
-    await expect(nullifierService.checkAndStoreNullifier(1, "0xabc")).rejects.toThrow(
+  it("storeNullifier upserts with an atomic onConflict/ignoreDuplicates backstop", async () => {
+    const { upsert } = mockSupabase({ existing: null });
+    await nullifierService.storeNullifier(1, "0xabc");
+    expect(upsert).toHaveBeenCalledWith(
+      { election_id: 1, nullifier_hash: "0xabc" },
+      { onConflict: "nullifier_hash", ignoreDuplicates: true }
+    );
+  });
+
+  it("storeNullifier surfaces supabase upsert errors", async () => {
+    mockSupabase({ existing: null, insertError: { message: "dup" } });
+    await expect(nullifierService.storeNullifier(1, "0xabc")).rejects.toThrow(
       "Error storing nullifier"
     );
+  });
+
+  it("isAlreadyVotedError detects the contract revert string", () => {
+    expect(isAlreadyVotedError(new Error('execution reverted: "Already voted"'))).toBe(true);
+    expect(isAlreadyVotedError({ message: "reverted: Already voted" })).toBe(true);
+    expect(isAlreadyVotedError(new Error("network error"))).toBe(false);
   });
 });

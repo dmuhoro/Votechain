@@ -7,8 +7,14 @@ export const generateNullifier = (voterId: string, electionId: number): string =
   return `0x${createHash("sha256").update(data).digest("hex")}`;
 };
 
-export const checkAndStoreNullifier = async (electionId: number, nullifierHash: string) => {
-  // Check if nullifier already exists
+export const isAlreadyVotedError = (error: any): boolean => {
+  const message = String(
+    error?.message || error?.shortMessage || error?.info?.error?.message || ""
+  ).toLowerCase();
+  return message.includes("already voted");
+};
+
+export const checkNullifier = async (electionId: number, nullifierHash: string): Promise<void> => {
   const { data: existingNullifier, error: fetchError } = await supabase
     .from("nullifiers")
     .select("id")
@@ -21,15 +27,21 @@ export const checkAndStoreNullifier = async (electionId: number, nullifierHash: 
   }
 
   if (existingNullifier) {
-    throw new Error("Voter has already cast a vote in this election.");
+    const err = new Error("Voter has already cast a vote in this election.");
+    (err as any).statusCode = 409;
+    throw err;
   }
+};
 
-  // Store nullifier
-  const { error: insertError } = await supabase
+export const storeNullifier = async (electionId: number, nullifierHash: string): Promise<void> => {
+  const { error: upsertError } = await supabase
     .from("nullifiers")
-    .insert({ election_id: electionId, nullifier_hash: nullifierHash });
+    .upsert({ election_id: electionId, nullifier_hash: nullifierHash }, {
+      onConflict: "nullifier_hash",
+      ignoreDuplicates: true,
+    });
 
-  if (insertError) {
-    throw new Error(`Error storing nullifier: ${insertError.message}`);
+  if (upsertError) {
+    throw new Error(`Error storing nullifier: ${upsertError.message}`);
   }
 };
