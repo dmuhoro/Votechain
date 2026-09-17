@@ -6,6 +6,7 @@ import "@nomicfoundation/hardhat-verify";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "dotenv/config";
 
 const config: HardhatUserConfig = {
   solidity: {
