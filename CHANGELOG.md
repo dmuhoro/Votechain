@@ -11,6 +11,31 @@
 
 #### Added
 
+- **CI workflow fixed (was instant-failing)** — GitHub Actions rejected `ci.yml` at
+  validation (0 jobs, `404: logs not found`) because unquoted `0x…` hex env values parsed
+  as YAML integers. Quoted every hex string, bumped checkout/setup-node to `@v5`.
+  Frontend, Backend, Contracts all green (`2026-09-16_runtime-bugs-and-infra.md`).
+- **Sepolia deployer = OWNER, not relayer** — hardhat `sepolia` accounts now use
+  `PRIVATE_KEY` (owner) and pass `RELAYER_ADDRESS` to the contract constructor,
+  enforcing ADR-003 key separation (`88499ea`).
+- **Live Supabase grants migration applied** — `20260916110000_grant_postgrest_access.sql`
+  applied via management API + recorded in `schema_migrations`
+  (`2026-09-16_supabase-migration-live.md`).
+- **Infura Sepolia RPC adopted** — user project key validated alive on mainnet + sepolia;
+  `SEPOLIA_RPC_URL` uses `https://sepolia.infura.io/v3/<key>` in gitignored env
+  (`2026-09-17_layer5-sepolia-and-preview-infra.md`).
+- **Railway backend service staged** — service `backend`, domain
+  `https://backend-production-64d05.up.railway.app`, all non-contract env set.
+  Deploy gated on the real `CONTRACT_ADDRESS` (zod fail-closed, Article IV.2).
+- **Frontend LIVE on Vercel** — `https://votechain-ivory.vercel.app`; env set via CLI,
+  rootDirectory via REST API, `vercel.json` moved into `packages/frontend` so SPA
+  rewrites apply (`ae59936`).
+- **Production Docker image verified boots** — "uncaught exception" during smoke was
+  `EADDRINUSE :::3001` (local backend under `--network host`); boots on `PORT=3999`
+  with `/api/health = 200`.
+
+#### Added
+
 - **`/api/stats` endpoint** — returns `activeElections`, `totalVotes`, `registeredVoters` via
   count queries on Supabase. Landing page now shows live stats with loading skeleton and error
   fallback (`2026-09-16_layer4-vote-path-hardening.md`).

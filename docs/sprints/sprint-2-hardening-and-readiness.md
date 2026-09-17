@@ -33,6 +33,13 @@ until the user provides credentials.
 | CodeRabbit config | ✅ (install pending) | coderabbit.yaml |
 | Full 13/13 e2e re-run after Article II.3 fix | ✅ | 2026-09-16_layer4-vote-path-hardening.md |
 | Backend unit tests: 8 pass (was 6) | ✅ | `npx vitest run` |
+| CI workflow green (quoted hex env fix) | ✅ | 2026-09-16_runtime-bugs-and-infra.md |
+| Sepolia deployer = owner (ADR-003) | ✅ | `88499ea` |
+| Live Supabase: grants migration applied | ✅ | 2026-09-16_supabase-migration-live.md |
+| Infura Sepolia RPC validated + adopted | ✅ | 2026-09-17 evidence |
+| Railway backend service staged + domain | ✅ (deploy awaits contract) | Railway dashboard |
+| Vercel frontend LIVE | ✅ | https://votechain-ivory.vercel.app |
+| Prod Docker image boots (/api/health 200) | ✅ | 2026-09-17 evidence |
 
 ## Key fixes (Sprint 2)
 
@@ -70,11 +77,58 @@ until the user provides credentials.
    (hardhat line, solidity-coverage, react-router-dom major, undici). Deliberately
    descoped per Article VIII.3.
 
-## Remaining work (Phase 2 — deferred until user provides credentials)
+### Layer 5 — Production provisioning (2026-09-17)
 
-- Deploy contract to Sepolia (needs user's private key + funded relayer wallet ≥0.1 ETH)
-- Railway deploy (needs live Supabase keys + Sepolia RPC + Etherscan key in Railway env)
-- Vercel deploy (needs Vercel project linked, VITE_API_URL set to Railway backend URL)
+1. **CI workflow fixed (CRITICAL)** — all GitHub Actions runs were instant-failing with
+   0 jobs and `404: logs not found`. Root cause: unquoted `0x…` hex strings in `env:`
+   blocks (e.g. `RELAYER_PRIVATE_KEY: 0xabcd…`) parse as integers in GitHub's YAML
+   validation and reject the file before a single job runs. Fixed by quoting every hex
+   env value (`"0x…"`); bumped `actions/checkout` + `actions/setup-node` to `@v5`
+   (Node 20 deprecation). Final run: Frontend, Backend, Contracts all green
+   (commits `e6a3005`…`e5ce565`).
+2. **Hardhat sepolia deployer = OWNER, not relayer** — network account was wired to
+   `RELAYER_PRIVATE_KEY`, making deployer == relayer (violates ADR-003). Now uses
+   `PRIVATE_KEY` (owner/deployer) and passes `RELAYER_ADDRESS` to the constructor
+   (`88499ea`).
+3. **Live Supabase migrated** — grants migration `20260916110000` applied via the
+   Supabase management API and recorded in `schema_migrations`; REST endpoints verified
+   (200) with the anon key. Project `gldfsjoikqydjxcarffr` (eu-west-1, ACTIVE_HEALTHY).
+4. **Infura credentials validated + adopted** — user-provided project key verified alive
+   on `mainnet` and `sepolia` endpoints (`eth_blockNumber` 200). `SEPOLIA_RPC_URL` in the
+   gitignored env now uses `https://sepolia.infura.io/v3/<key>` (replaces PublicNode) for
+   the deploy + relayer. No code ships with the key; it lives only in gitignored env files
+   and the Railway dashboard.
+5. **Railway backend staged** — service `backend` created
+   (`ce115af3-a95f-4e3c-95f5-53558fa57220`), provided domain
+   `https://backend-production-64d05.up.railway.app`, and all non-contract env set
+   (`NODE_ENV`, `PORT`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RELAYER_PRIVATE_KEY`,
+   `OWNER_PRIVATE_KEY`, `SEPOLIA_RPC_URL`, `ADMIN_EMAILS`, `SERVER_SECRET`, `OTP_RATE_LIMIT`,
+   `CORS_ORIGIN`). Deploy itself waits on the Sepolia contract address (config refuses to
+   boot on a placeholder, Article IV.2).
+6. **Vercel frontend live** — project linked (`dmuhor01/votechain`), env set via CLI
+   (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL), rootDirectory set via REST
+   API (the deprecated `vercel.json` property was rejected by the current CLI and
+   removed), `vercel.json` moved into `packages/frontend` so SPA rewrites apply.
+   **Production: https://votechain-ivory.vercel.app** (200, SPA rewrites OK, bundle bakes
+   the Railway + Supabase URLs).
+7. **Production Docker image verified boots** — earlier "uncaught exception" during smoke
+   test was `EADDRINUSE :::3001` (local backend already bound the port under `--network
+   host`). Re-run on `PORT=3999`: `Relayer initialized` → `Server running` →
+   `/api/health = 200`.
+
+## Remaining work (Phase 2 — Sepolia golive, blocked on faucet funding)
+
+Everything below is staged; the only un-done step is funding the two generated wallets
+(separate owner + relayer per ADR-003) via a Sepolia faucet:
+
+- [ ] **Faucet claim → owner** wallet `0x5FB9161fAF27E4B41F8A2A8a4bC03b3A10429e54` (≈0.05 SepoliaETH)
+- [ ] **Split script** (`/tmp/opencode/split-funds.mjs`, Infura-backed) → owner keeps
+      deploy+seed gas, sends ≈0.45 SEP to relayer wallet `0xdb38aa5c58adA28F1A3c6fBB9CD9110118fDacB4`
+- [ ] Deploy contract to Sepolia (`npm run deploy:sepolia -w contracts`) + Etherscan verify
+- [ ] Seed demo election on-chain
+- [ ] Railway deploy (real `CONTRACT_ADDRESS` is the missing env var)
+- [ ] Update `CORS_ORIGIN` on Railway to the frontend URL if needed
+- [ ] End-to-end proof against live URLs (`votechain-ivory.vercel.app` ↔ Railway ↔ Sepolia)
 - CodeRabbit install (needs user's GitHub click at the install link)
 
 ## CodeRabbit install
