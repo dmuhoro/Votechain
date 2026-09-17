@@ -1,7 +1,9 @@
 {
   "name": "votechain",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "dev:chain": "npm run node -w contracts",
@@ -11,6 +13,9 @@
     "build": "npm run build -w frontend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
+    "concurrently": "^8.2.2",
+    "railway": "^3.11.0"
+  },
+  "description": "Trustless digital voting: provably uncountable-by-hand ballot tallies on-chain (Sepolia). Monorepo: Solidity contract, Express API, React SPA.",
+  "version": "1.0.0"
 }

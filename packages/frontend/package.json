@@ -36,5 +36,6 @@
     "typescript": "^5.2.2",
     "vite": "^8.0.16",
     "vitest": "^4.1.8"
-  }
+  },
+  "description": "VoteChain: React 18 + Vite SPA — wallet-free, OTP-first voting client."
 }

@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Express API for VoteChain",
+  "description": "VoteChain: Express + TS API (auth, elections, votes, admin, relayer) — the tamper-evident ballot front-door.",
   "main": "src/index.ts",
   "scripts": {
     "dev": "node scripts/sync-artifact.mjs && nodemon --exec ts-node src/index.ts",
