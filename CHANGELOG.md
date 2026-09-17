@@ -33,9 +33,6 @@
 - **Production Docker image verified boots** — "uncaught exception" during smoke was
   `EADDRINUSE :::3001` (local backend under `--network host`); boots on `PORT=3999`
   with `/api/health = 200`.
-
-#### Added
-
 - **`/api/stats` endpoint** — returns `activeElections`, `totalVotes`, `registeredVoters` via
   count queries on Supabase. Landing page now shows live stats with loading skeleton and error
   fallback (`2026-09-16_layer4-vote-path-hardening.md`).
@@ -46,6 +43,20 @@
 - **`.dockerignore`** — excludes node_modules/artifacts/cache/dist from Docker build context.
 - **`nullifierService.isAlreadyVotedError()`** — detects the contract `"Already voted"` revert
   string from ethers and maps to HTTP 409.
+- **Layer 5 LIVE on Sepolia** — `VoteChain.sol` deployed (owner-deployer, relayer separate) at
+  `0x672a1D837c5C0992218205b0E81492a07D7C5EB5`; election #1 "General Election 2027 - Presidential"
+  seeded on-chain + mirrored in live Supabase.
+- **Backend LIVE on Railway** — `packages/contracts/hardhat.config.ts` now loads `dotenv` (was
+  silently empty → `HH117` on sepolia deploys). Railway deploy moved from deprecated `railway.json`
+  to `.railway/railway.ts` IaC (Railpack build+start commands). Domain
+  `https://backend-production-64d05.up.railway.app` serves `/api/health`, `/api/stats`, elections,
+  candidates (on-chain backing).
+- **End-to-end vote PROVEN live** — probe voter registered → admin verified via the real
+  `/api/admin/voters/:id/verify` path → vote cast → relayer (`0xdb38…`) submitted → Sepolia tx
+  `0xb1d3f344…` SUCCESS, block `11724916`; results endpoint shows Candidate A: 1; duplicate vote
+  attempt correctly blocked with HTTP 409.
+- **Railway `railway.json` → IaC** — `railway.json` (deprecated, ignored by `railway up`) replaced
+  with `.railway/railway.ts` (`service("backend")` with build/start/healthcheck).
 
 #### Fixed
 

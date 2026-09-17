@@ -116,19 +116,40 @@ until the user provides credentials.
    host`). Re-run on `PORT=3999`: `Relayer initialized` → `Server running` →
    `/api/health = 200`.
 
+### Layer 5 — LIVE on Sepolia (completed 2026-09-17)
+
+8. **Hardhat env-load bug fixed (CRITICAL)** — `hardhat.config.ts` read `process.env.SEPOLIA_RPC_URL`
+   but nothing loaded `.env`, so every sepolia deploy failed `HH117: Empty string for network or
+   forking URL`. Added `import "dotenv/config"` + `dotenv` devDependency (`8646c64`, `dbd2c53`).
+9. **Contract deployed + seeded** — owner-deployer `0x5FB9…04e54` (ADR-003), relayer
+   `0xdb38…aCb4` passed to constructor. Address `0x672a1D837c5C0992218205b0E81492a07D7C5EB5`,
+   election #1 (2027 Presidential) live; window 2026-09-17→24.
+10. **Supabase election row created + synced** — Supabase `elections.id=1` mirrors the on-chain
+    row (window corrected to match the chain's authoritative times).
+11. **Railway deploy corrected** — `railway.json` (Config-as-Code) is deprecated and ignored by
+    `railway up` (new services can't opt in); an accidental `railway up` from the unlinked repo
+    created a duplicate project (deleted). Replaced with `.railway/railway.ts` IaC
+    (`service("backend")` with build `npm run compile -w contracts && npm run build -w backend`,
+    start `node packages/backend/dist/index.js`, healthcheck `/api/health`). Deployed → SUCCESS.
+12. **Live E2E proven** — probe voter registered, admin-verified via `/api/admin/voters/:id/verify`,
+    vote cast → relayer tx `0xb1d3f344…` (block 11724916, SUCCESS) → results show Candidate A: 1;
+    duplicate attempt returned HTTP 409. All verified through the public Railway domain.
+    Evidence: `docs/evidence/2026-09-17_layer5-live-end-to-end.md`.
+
 ## Remaining work (Phase 2 — Sepolia golive, blocked on faucet funding)
 
 Everything below is staged; the only un-done step is funding the two generated wallets
 (separate owner + relayer per ADR-003) via a Sepolia faucet:
 
-- [ ] **Faucet claim → owner** wallet `0x5FB9161fAF27E4B41F8A2A8a4bC03b3A10429e54` (≈0.05 SepoliaETH)
-- [ ] **Split script** (`/tmp/opencode/split-funds.mjs`, Infura-backed) → owner keeps
-      deploy+seed gas, sends ≈0.45 SEP to relayer wallet `0xdb38aa5c58adA28F1A3c6fBB9CD9110118fDacB4`
-- [ ] Deploy contract to Sepolia (`npm run deploy:sepolia -w contracts`) + Etherscan verify
-- [ ] Seed demo election on-chain
-- [ ] Railway deploy (real `CONTRACT_ADDRESS` is the missing env var)
-- [ ] Update `CORS_ORIGIN` on Railway to the frontend URL if needed
-- [ ] End-to-end proof against live URLs (`votechain-ivory.vercel.app` ↔ Railway ↔ Sepolia)
+- [ ] ~~**Faucet claim → owner** wallet `0x5FB9161fAF27E4B41F8A2A8a4bC03b3A10429e54` (≈0.05 SepoliaETH)~~ **DONE** (0.005 SEP via sepolia-faucet-service.vercel.app)
+- [ ] ~~**Split script** (`/tmp/opencode/split-funds.mjs`, Infura-backed) → owner keeps
+      deploy+seed gas, sends ≈0.45 SEP to relayer wallet `0xdb38aa5c58adA28F1A3c6fBB9CD9110118fDacB4`~~ **DONE** (both funded directly)
+- [ ] ~~Deploy contract to Sepolia (`npm run deploy:sepolia -w contracts`) + Etherscan verify~~ **DONE** at `0x672a1D837c5C0992218205b0E81492a07D7C5EB5` (Etherscan verify skipped — no API key; contract readable on-chain)
+- [ ] ~~Seed demo election on-chain~~ **DONE** (election #1, "General Election 2027 - Presidential", 3 candidates)
+- [ ] ~~Railway deploy (real `CONTRACT_ADDRESS` is the missing env var)~~ **DONE** — contract address + corrected `CORS_ORIGIN` set; deployed via `.railway/railway.ts` IaC
+- [ ] ~~Update `CORS_ORIGIN` on Railway to the frontend URL if needed~~ **DONE** → `https://votechain-ivory.vercel.app`
+- [ ] ~~End-to-end proof against live URLs (`votechain-ivory.vercel.app` ↔ Railway ↔ Sepolia)~~ **DONE** — register → admin verify → cast → Sepolia tx `0xb1d3f344…` SUCCESS; results show Candidate A: 1; duplicate vote blocked (409)
+- [ ] CodeRabbit install (needs user's GitHub click at the install link)
 - CodeRabbit install (needs user's GitHub click at the install link)
 
 ## CodeRabbit install
