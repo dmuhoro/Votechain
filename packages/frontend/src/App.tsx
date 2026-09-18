@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useNetworkStore } from './store/networkStore';
 import { UNAUTHORIZED_EVENT } from './lib/api';
 import OfflineBanner from './components/OfflineBanner';
+import MobileBottomNav from './components/MobileBottomNav';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
@@ -38,6 +39,7 @@ const AppRouter: React.FC = () => {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <MobileBottomNav />
     </>
   );
 };

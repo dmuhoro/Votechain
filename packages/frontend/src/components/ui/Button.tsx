@@ -7,8 +7,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', isLoading, children, className, ...props }, ref) => {
-    const baseStyles = 'font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  ({ variant = 'primary', size = 'md', isLoading, children, className, type, ...props }, ref) => {
+    const baseStyles =
+      'font-semibold rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles = {
       primary: 'bg-blue-600 hover:bg-blue-700 text-white',
@@ -25,8 +26,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
+        // Default to type="button" so buttons inside <form> don't accidentally
+        // submit (was silently submitting the create-election form on mobile).
+        type={type ?? 'button'}
         className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
-        disabled={isLoading || props.disabled}
+        disabled={props.disabled || isLoading}
+        aria-busy={isLoading || undefined}
         {...props}
       >
         {isLoading ? 'Loading...' : children}

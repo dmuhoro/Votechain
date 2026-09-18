@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import api, { toErrorMessage } from '../lib/api';
 import { VoteReceipt } from '../types';
 import TxHashBadge from '../components/TxHashBadge';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import PageShell from '../components/PageShell';
 
 const ReceiptPage: React.FC = () => {
   const { txHash } = useParams<{ txHash: string }>();
@@ -14,26 +15,30 @@ const ReceiptPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchReceipt = async () => {
       try {
         if (!txHash) throw new Error('No transaction hash provided');
         const response = await api.get(`/api/votes/receipt/${txHash}`);
-        setReceipt(response.data);
+        if (!cancelled) setReceipt(response.data);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to fetch vote receipt');
+        if (!cancelled) setError(toErrorMessage(err, 'Failed to fetch vote receipt'));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     if (txHash) {
       fetchReceipt();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [txHash]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800">
         <p className="text-gray-400">Loading receipt...</p>
       </div>
     );
@@ -41,25 +46,25 @@ const ReceiptPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 py-12">
-        <div className="max-w-2xl mx-auto px-4">
-          <Card className="bg-red-900 border border-red-700">
-            <p className="text-red-200 mb-4">{error}</p>
+      <PageShell title="Vote Receipt">
+        <div className="mx-auto max-w-2xl">
+          <Card className="border border-red-700 bg-red-900">
+            <p className="mb-4 text-red-200">{error}</p>
             <Button variant="secondary" onClick={() => navigate('/elections')}>
               Back to Elections
             </Button>
           </Card>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 py-12">
-      <div className="max-w-2xl mx-auto px-4">
-        <Card className="text-center mb-8 bg-green-900 border border-green-700">
-          <div className="text-4xl mb-4">✓</div>
-          <h1 className="text-3xl font-bold text-green-200 mb-2">Vote Confirmed</h1>
+    <PageShell title="Vote Confirmed">
+      <div className="mx-auto max-w-2xl">
+        <Card className="mb-6 border border-green-700 bg-green-900 text-center">
+          <div className="mb-4 text-4xl">✓</div>
+          <h1 className="mb-2 text-2xl font-bold text-green-200 md:text-3xl">Vote Confirmed</h1>
           <p className="text-green-300">Your vote has been permanently recorded on the blockchain.</p>
         </Card>
 
@@ -98,7 +103,7 @@ const ReceiptPage: React.FC = () => {
             </div>
 
             <div className="border-t border-gray-700 pt-6">
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="mb-4 text-sm text-gray-400">
                 Your vote is now part of the immutable blockchain record. Anyone can verify it using the transaction hash above.
               </p>
               <div className="flex gap-2">
@@ -121,7 +126,7 @@ const ReceiptPage: React.FC = () => {
           </Card>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

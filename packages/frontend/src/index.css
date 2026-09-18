@@ -18,6 +18,15 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Android: remove grey tap-flash on taps -> looks native, no crash. */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button,
+a {
+  /* Kill the ~300ms click delay and double-tap zoom on mobile. */
+  touch-action: manipulation;
 }
 
 code {

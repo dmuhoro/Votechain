@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import api, { toErrorMessage } from '../lib/api';
 import { useVote } from '../hooks/useVote';
+import { useNetworkStore } from '../store/networkStore';
 import { Candidate } from '../types';
 import CandidateCard from '../components/CandidateCard';
 import VoteConfirmModal from '../components/VoteConfirmModal';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import PageShell from '../components/PageShell';
 
 const BallotPage: React.FC = () => {
   const { electionId } = useParams<{ electionId: string }>();
   const navigate = useNavigate();
+  const isOnline = useNetworkStore((s) => s.isOnline);
   const { castVote, isSubmitting, error: voteError } = useVote();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
@@ -19,20 +22,24 @@ const BallotPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchCandidates = async () => {
       try {
         const response = await api.get(`/api/elections/${electionId}/candidates`);
-        setCandidates(response.data);
+        if (!cancelled) setCandidates(response.data);
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to fetch candidates');
+        if (!cancelled) setError(toErrorMessage(err, 'Failed to fetch candidates'));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     if (electionId) {
       fetchCandidates();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [electionId]);
 
   const handleVoteConfirm = async () => {
@@ -48,37 +55,45 @@ const BallotPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800">
         <p className="text-gray-400">Loading candidates...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <Button variant="secondary" onClick={() => navigate('/elections')} className="mb-8">
+    <PageShell title="Cast Your Vote">
+      <div className="mx-auto max-w-4xl">
+        <Button variant="secondary" onClick={() => navigate('/elections')} className="mb-6">
           ← Back to Elections
         </Button>
 
-        <Card className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Cast Your Vote</h1>
+        <Card className="mb-6">
+          <h1 className="mb-3 text-2xl font-bold md:text-3xl">Cast Your Vote</h1>
           <p className="text-gray-400">Select a candidate below. Your vote will be recorded on the blockchain.</p>
         </Card>
 
+        {!isOnline && (
+          <Card className="mb-6 border border-amber-700 bg-amber-950">
+            <p className="text-sm text-amber-200">
+              You&apos;re offline — you can review the ballot, but casting requires a connection.
+            </p>
+          </Card>
+        )}
+
         {error && (
-          <Card className="bg-red-900 border border-red-700 mb-8">
+          <Card className="mb-6 border border-red-700 bg-red-900">
             <p className="text-red-200">{error}</p>
           </Card>
         )}
 
         {voteError && (
-          <Card className="bg-red-900 border border-red-700 mb-8">
+          <Card className="mb-6 border border-red-700 bg-red-900">
             <p className="text-red-200">{voteError}</p>
           </Card>
         )}
 
-        <div className="space-y-4 mb-8">
+        <div className="mb-6 space-y-4">
           {candidates.map((candidate) => (
             <CandidateCard
               key={candidate.id}
@@ -93,10 +108,10 @@ const BallotPage: React.FC = () => {
           variant="primary"
           size="lg"
           onClick={() => setIsModalOpen(true)}
-          disabled={!selectedCandidateId}
+          disabled={!selectedCandidateId || !isOnline}
           className="w-full"
         >
-          Submit Vote
+          {!isOnline ? 'Reconnect to vote' : 'Submit Vote'}
         </Button>
 
         <VoteConfirmModal
@@ -107,7 +122,7 @@ const BallotPage: React.FC = () => {
           isSubmitting={isSubmitting}
         />
       </div>
-    </div>
+    </PageShell>
   );
 };
 
