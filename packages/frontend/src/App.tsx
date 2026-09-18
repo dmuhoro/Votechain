@@ -13,6 +13,7 @@ import BallotPage from './pages/BallotPage';
 import ResultsPage from './pages/ResultsPage';
 import ReceiptPage from './pages/ReceiptPage';
 import AdminPage from './pages/AdminPage';
+import OfflinePage from './pages/OfflinePage';
 
 const AppRouter: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const AppRouter: React.FC = () => {
         <Route path="/ballot/:electionId" element={<BallotPage />} />
         <Route path="/results/:electionId" element={<ResultsPage />} />
         <Route path="/receipt/:txHash" element={<ReceiptPage />} />
+        <Route path="/offline" element={<OfflinePage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

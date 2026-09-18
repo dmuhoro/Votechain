@@ -3,6 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api, { toErrorMessage } from '../lib/api';
 import { useVote } from '../hooks/useVote';
 import { useNetworkStore } from '../store/networkStore';
+import { useAuthStore } from '../store/authStore';
+import {
+  saveSignedVoucher,
+  getOfflineBallot,
+  captureOfflineBallot,
+  removeOfflineBallot,
+} from '../lib/offlineBallots';
+import type { CapturedInput } from '../hooks/useOfflineSync';
 import { Candidate } from '../types';
 import CandidateCard from '../components/CandidateCard';
 import VoteConfirmModal from '../components/VoteConfirmModal';
@@ -14,12 +22,15 @@ const BallotPage: React.FC = () => {
   const { electionId } = useParams<{ electionId: string }>();
   const navigate = useNavigate();
   const isOnline = useNetworkStore((s) => s.isOnline);
+  const user = useAuthStore((s) => s.user);
   const { castVote, isSubmitting, error: voteError } = useVote();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [offlineCaptured, setOfflineCaptured] = useState<CapturedInput | null>(null);
+  const [isPreparingOffline, setIsPreparingOffline] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,8 +53,82 @@ const BallotPage: React.FC = () => {
     };
   }, [electionId]);
 
+  const numericElectionId = electionId ? Number(electionId) : null;
+
+  // Provision a signed offline voucher as soon as a verified voter opens the
+  // ballot while online. If the connection drops later, the voucher is already
+  // on-device so the vote can still be captured (ADR-008). Best-effort for the
+  // online path: if it fails the voter can still vote normally online.
+  useEffect(() => {
+    if (!numericElectionId || !isOnline || !user?.id) return;
+    let cancelled = false;
+    setIsPreparingOffline(true);
+    const provision = async () => {
+      try {
+        const response = await api.post('/api/offline/ballots', {
+          electionId: numericElectionId,
+        });
+        if (!cancelled && response.data?.voucher) {
+          saveSignedVoucher(response.data.voucher);
+        }
+      } catch {
+        // Non-fatal: online voting still works; offline capture needs a
+        // voucher, so an explicit error is shown if the network drops.
+      } finally {
+        if (!cancelled) setIsPreparingOffline(false);
+      }
+    };
+    void provision();
+    return () => {
+      cancelled = true;
+    };
+  }, [numericElectionId, isOnline, user?.id]);
+
+  // Restore an already-captured ballot for this election after a reload.
+  useEffect(() => {
+    if (!numericElectionId) return;
+    const existing = getOfflineBallot(numericElectionId);
+    if (existing?.status === 'captured') {
+      setOfflineCaptured({
+        electionId: existing.electionId,
+        candidateId: existing.candidateId,
+        voucher: existing.voucher,
+        electionTitle: existing.electionTitle,
+        candidateName: existing.candidateName,
+      });
+    }
+  }, [numericElectionId]);
+
   const handleVoteConfirm = async () => {
     if (!electionId || !selectedCandidateId) return;
+
+    // Offline: capture the ballot on-device instead of failing. Submission
+    // happens automatically on reconnect THROUGH the real cast path.
+    if (!isOnline) {
+      const existing = getOfflineBallot(Number(electionId));
+      if (!existing) {
+        setError(
+          'No offline ballot is available on this device. Reconnect once to download a signed ballot, then it can be captured offline.',
+        );
+        return;
+      }
+      captureOfflineBallot({
+        voterId: user?.id ?? existing.voterId,
+        electionId: Number(electionId),
+        candidateId: selectedCandidateId,
+        voucher: existing.voucher,
+        capturedAt: new Date().toISOString(),
+        status: 'captured',
+      });
+      setOfflineCaptured({
+        electionId: Number(electionId),
+        candidateId: selectedCandidateId,
+        voucher: existing.voucher,
+        electionTitle: `Election #${electionId}`,
+        candidateName: candidates.find((c) => c.id === selectedCandidateId)?.name,
+      });
+      return;
+    }
 
     const receipt = await castVote(Number(electionId), selectedCandidateId);
     if (receipt) {
@@ -76,8 +161,35 @@ const BallotPage: React.FC = () => {
         {!isOnline && (
           <Card className="mb-6 border border-amber-700 bg-amber-950">
             <p className="text-sm text-amber-200">
-              You&apos;re offline — you can review the ballot, but casting requires a connection.
+              You&apos;re offline. Your vote can still be captured on this device and will submit
+              automatically when you reconnect.
             </p>
+          </Card>
+        )}
+
+        {isPreparingOffline && (
+          <Card className="mb-6 border border-blue-800 bg-blue-950">
+            <p className="text-sm text-blue-200">Preparing an offline ballot…</p>
+          </Card>
+        )}
+
+        {offlineCaptured && (
+          <Card className="mb-6 border border-green-800 bg-green-950">
+            <p className="text-sm text-green-200">
+              Your offline ballot has been captured on this device. It is stored securely and will
+              be submitted to the VoteChain network when you reconnect.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                removeOfflineBallot(offlineCaptured.electionId);
+                setOfflineCaptured(null);
+              }}
+            >
+              Discard capture
+            </Button>
           </Card>
         )}
 
@@ -107,11 +219,17 @@ const BallotPage: React.FC = () => {
         <Button
           variant="primary"
           size="lg"
-          onClick={() => setIsModalOpen(true)}
-          disabled={!selectedCandidateId || !isOnline}
+          onClick={() => {
+            if (isOnline) {
+              setIsModalOpen(true);
+            } else {
+              void handleVoteConfirm();
+            }
+          }}
+          disabled={!selectedCandidateId}
           className="w-full"
         >
-          {!isOnline ? 'Reconnect to vote' : 'Submit Vote'}
+          {!isOnline ? 'Capture Vote' : 'Submit Vote'}
         </Button>
 
         <VoteConfirmModal
@@ -121,6 +239,16 @@ const BallotPage: React.FC = () => {
           onConfirm={handleVoteConfirm}
           isSubmitting={isSubmitting}
         />
+
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => navigate('/offline')}
+            className="text-xs font-medium text-gray-400 hover:text-gray-200"
+          >
+            View your offline ballots
+          </button>
+        </div>
       </div>
     </PageShell>
   );
