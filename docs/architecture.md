@@ -2,6 +2,8 @@
 
 > Companion doc to `docs/engineering/CONSTITUTION.md`. Read both before building.
 > Status: reflects what is **implemented in code** vs **ASPIRATIONAL** (not yet proven live).
+> Voter-facing status as of 2026-09-18: online voting live on Sepolia; **offline ballot
+> capture + reconciliation** (ADR-008) shipped Sprint 4.
 
 ---
 
@@ -46,6 +48,23 @@ Demo target: public **Sepolia** testnet demo (not production mainnet voting).
 6. Contract asserts `onlyRelayer`, election active, nullifier not already used (authoritative gate).
 7. Backend writes `vote_records` (tx hash, nullifier, block number) for the receipt page.
 
+### The offline vote path (ADR-008): capture offline → reconcile through the SAME real cast path
+
+1. `POST /api/offline/ballots` (online) — verified voter provisions a **one-time voucher**
+   (HMAC over `voter+election+candidate-fingerprint`) for an open election; row in
+   `offline_ballots` (status `issued`, `UNIQUE (voter_id, election_id)`).
+2. Offline — voter selects a candidate on-device; the ballot is stored **durably** on the device
+   (safe storage) in explicit `pending` state ("saved — submits on reconnect"). No vote exists
+   anywhere server-side yet.
+3. `POST /api/offline/ballots/submit` (on reconnect) — validates the voucher signature + binding,
+   then calls the **shared `voteService.castVote`** — the identical code path as step 1–7 above —
+   and marks the voucher `consumed` on success. First submission wins via the nullifier
+   (both boundaries); every outcome is explicit (`voted`/`duplicate`/`expired`/`rejected`).
+
+The offline path adds **provisioning** (vouchers) + **local staging** (device queue) +
+**reconciliation** (voucher consumption vs nullifier vs chain) — it does NOT add a second counting
+authority. The chain + `vote_records` remain the only tallies.
+
 ### The admin path (owner-gated on-chain): `routes/admin.ts`
 
 - `POST /api/admin/elections/create` — on-chain `createElection` (**owner** wallet), then Supabase row.
@@ -65,8 +84,9 @@ Demo target: public **Sepolia** testnet demo (not production mainnet voting).
 |-------|-------|----------|
 | Contract | `packages/contracts/contracts/VoteChain.sol` | Owner (create/close/relayer) + Relayer (castVote) |
 | Deploy | `packages/contracts/scripts/deploy.ts`, `seed-election.ts` | `deployments/<network>.json` (gitignored) |
-| API | `packages/backend/src/routes/{auth,elections,votes,admin}.ts` | Zod-validated, Supabase-backed |
-| Services | `relayerService.ts`, `nullifierService.ts`, `supabaseService.ts` | Private keys in env only |
+| API | `packages/backend/src/routes/{auth,elections,votes,admin,offline}.ts` | Zod-validated, Supabase-backed |
+| Services | `relayerService.ts`, `nullifierService.ts`, `voteService.ts`, `offlineBallotService.ts`, `supabaseService.ts` | Private keys in env only |
+| Offline (frontend) | `packages/frontend/src/lib/offlineBallots.ts`, `hooks/useOfflineSync.ts`, `pages/OfflinePage.tsx` | Durable safe-storage staging; submits via the real path |
 | Identity | Supabase `voters`, `nullifiers`, `elections`, `vote_records` | RLS per `supabase/migrations/` |
 | Frontend | `packages/frontend/src/pages/*`, `hooks/*`, `store/*`, `lib/*` | Reads backend; no wallet |
 
@@ -82,21 +102,29 @@ Demo target: public **Sepolia** testnet demo (not production mainnet voting).
 
 ---
 
-## 5. Gaps / risk table (honest, as of engineering-foundation sprint)
+## 5. Gaps / risk table (honest, as of 2026-09-18 — Sprint 4)
 
 | Gap | Severity | Status | Open? |
 |-----|----------|--------|-------|
-| Contract deployed on Sepolia | P0 (demo blocker) | **Not done** — no funded relayer/owner key yet | yes |
-| Supabase project wired (URL + keys) | P0 | **Partial** — project exists (`gldfsjoikqydjxcarffr`); migrations applied; anon/service-role keys not yet loaded into local env | yes |
-| Backend boots against live Supabase | P0 | Not yet run live | yes |
-| Frontend reachable at a public URL | P0 | ASPIRATIONAL — builds pending infra | yes |
-| Voter email-in demonstration | P2 | Works via OTP; Demo voter seeding not automated | no |
-| Relayer nonce race under concurrency | P2 | Documented; single-instance retry on failure | no |
-| Rate limiting on `/auth/send-otp` | P1 | **In progress** this sprint (hardening) | |
-| Error/loading states on pages | P1 | **In progress** this sprint (hardening) | |
-| Nullifier SELECT-then-INSERT race (TOCTOU) | P1 | DB UNIQUE backstop exists; graceful-failure handling added in hardening | |
-| Backend unit tests | P1 | **In progress** this sprint | |
-| Frontend component tests | P2 | Not started | no |
+| Contract deployed on Sepolia | P0 (demo blocker) | ✅ Done (`0x672a1D837c5C0992218205b0E81492a07D7C5EB5`) | no |
+| Supabase project wired + migrations applied | P0 | ✅ Done (`gldfsjoikqydjxcarffr`, 3 migrations incl. `offline_ballots`) | no |
+| Backend live against live Supabase | P0 | ✅ Done (Railway) | no |
+| Frontend reachable at public URL | P0 | ✅ Done (Vercel PWA, installed on device) | no |
+| Live end-to-end votes + HTTP 409 double-vote | P0 | ✅ Done (3 votes on-chain, receipt path live) | no |
+| Android PWA install/offline/recovery on a physical device | P1 | ✅ Done (Sprint 3 device pass) | no |
+| **Offline ballot capture + reconciliation (ADR-008)** | P1 | ✅ Done (Sprint 4; vouchers + on-reconnect submit through the real cast path) | no |
+| Voter email-in demonstration | P2 | ✅ Works via OTP/magic-link (prod session, on-device) | no |
+| SMTP/OTP rate limit | P1 | ✅ Done (`OTP_RATE_LIMIT`, express-rate-limit) | no |
+| Results/loading error states | P1 | ✅ Done (Sprint 3 anti-fragility core) | no |
+| Nullifier SELECT-then-INSERT race (TOCTOU) | P1 | ✅ DB UNIQUE backstop + graceful failure (ADR-002) | no |
+| Backend unit tests | P1 | ✅ Done (nullifier, voucher/path) | no |
+| Frontend component/unit tests | P2 | ✅ 14 vitest tests (incl. offline capture store) | no |
+| SMS/USSD feature-phone channel (ADR-006 Option A) | P2 | Not built — external carrier gateway credits needed | yes |
+| Etherscan source verification | P2 | Not done — needs `ETHERSCAN_API_KEY` | yes |
+| Broad multi-device hardware matrix (older Android/iOS/private WebView) | P2 | Ongoing after single-device accept bar | yes |
+| CodeRabbit PR review | P2 | Pending user GitHub app install click | yes |
+| Offline coercion-resistance (receipt-freeness) | P2 | **Inherently weaker offline** (ADR-008 §4) — design constraint, not a task | no |
+| Relayer nonce race under high concurrency | P2 | Documented; single-instance retry on failure (acceptable testnet demo, ADR-004) | no |
 
 Nothing in this table is claimed complete unless it is marked done with evidence in
 `docs/evidence/` (constitution: never narrative alone).
@@ -107,3 +135,4 @@ Nothing in this table is claimed complete unless it is marked done with evidence
 - No zk-proof privacy layer (nullifiers are public-unlinkable hashes, not zero-knowledge).
 - No MetaMask/self-custody flow — relayer pattern only.
 - No production-grade resilience (single relayer instance is acceptable for a testnet demo).
+- No offline autonomous casting (ADR-008: offline captures reconcile through the same live path).
