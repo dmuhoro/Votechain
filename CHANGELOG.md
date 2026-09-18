@@ -7,7 +7,88 @@
 
 ## [Unreleased]
 
-### Sprint 2 — Hardening and Readiness
+### Sprint 3 — Mobile-First Anti-Fragility (Smart-Phone PWA)
+
+#### Added
+
+- **Installable Android PWA** — `vite-plugin-pwa` (devDep, build-time) with workbox
+  `generateSW`: 19-entry app-shell precache, `navigateFallback` to `/index.html`,
+  navigateFallbackDenylist for `/api/*`, and a runtime cache for **read-only GET**
+  `/api/*` paths (NetworkFirst, 5 s timeout, 7-day expiry). The `isApiReadOnlyRequest`
+  matcher is self-contained (workbox stringifies it), excludes same-origin + dev server
+  (an HTML shell can never masquerade as a JSON API response), and never matches
+  vote/admin writes — writes are network-only (`66e2b3e`).
+- **PWA assets** — `icon.svg` → 192/512/maskable/apple images + favicon (was a 404),
+  manifest (standalone display, theme/background colors), `viewport-fit=cover`,
+  `theme-color`, `apple-mobile-web-app` meta; `registerSW({ immediate: true })`.
+- **Anti-fragility core** — top-level `ErrorBoundary` (recovery card, no blank
+  Android screen), `lib/storage.ts` safe-storage wrapper (private-mode WebView can't
+  white-screen the app), hardened `lib/api.ts` (15 s timeout, retry-once for idempotent
+  GETs skipped while offline, typed `ApiError` offline/timeout/http/network/aborted,
+  `toErrorMessage`, 401 routed via `votechain:unauthorized` event instead of a hard
+  reload), lazy Supabase client (module-scope env throw removed), `authStore.initialize`
+  try/catch/finally, `AuthCallbackPage` 20 s timeout + error card, `networkStore` +
+  `useNetworkStatus` + global `OfflineBanner`, `useResults` polling pause while
+  hidden/offline with overlap/abort guard.
+- **Mobile-first UI** — `PageShell` (shared chrome + per-route titles), `MobileBottomNav`
+  (Home/Elections/Admin, 44 px targets, safe-area), `Button` fixes (`type="button"`
+  default fixed a silent admin-form submit; `disabled`/`isLoading` compose), scrollable
+  `Modal` (Escape/backdrop close), responsive `ResultsChart` (h-64 mobile + table
+  fallback), transparent tap-highlight + `touch-action: manipulation` (`a5713cf`).
+- **Offline truth-telling + vote guard** — `useVote` in-flight ref (rapid double-taps
+  can't fire two `/votes/cast`), offline pre-check returns "reconnect to vote" (no silent
+  drop, Article I.6), `useElection` auto-refetch on reconnect, cached-data "stale" labels
+  on Elections/Results/Receipt (`923d01a`).
+- **Frontend vitest suite** (was: `vitest` failed with "no test files found") —
+  `vitest.config.ts` (jsdom + react) and **13 tests** covering storage
+  (`Storage.prototype` spy simulates the private-mode WebView throw path), API error
+  classification, and the network store's StrictMode-safe listener registration
+  (`d5918e7`). New devDep `jsdom` (peer of vitest).
+- **`VITE_SEPOLIA_EXPLORER`** env on Vercel production so the results explorer link is
+  live on phones; separate from the bundle's main API wiring.
+- **Docs** — `docs/sprints/sprint-3-mobile-anti-fragility.md`, Android PWA test runbook
+  (`docs/runbooks/android-pwa-test.md`), ADR-007, evidence file.
+
+#### Fixed
+
+- **Frontend had zero tests**: `test` script failed ("no test files found") — now
+  vitest runs a real suite (13/13).
+- **`favicon.ico` 404** — ImageMagick-generated set from `icon.svg`; all install icons
+  verified 200 over HTTPS.
+- **Admin form silently submitting with Enter** — `Button` defaulted to `type="submit"`;
+  now `type="button"` (create buttons explicitly `type="submit"`).
+- **Module-scope Supabase env throw** could white-screen on a misconfig — lazy client.
+- **Casting with connectivity drop** previously could hang without feedback — offline +
+  in-flight guards make it fail fast with an explicit reason.
+- **201-module `ResultsChart`** was unusable on phones — responsive height + tick labels
+  + table fallback.
+
+#### Changed
+
+- Frontend bundles the mobile shell: bottom nav on phones, consistent `PageShell` chrome
+  across Elections/Ballot/Results/Receipt/Admin.
+- Network/error vocabulary is now uniform (`toErrorMessage`) across pages.
+
+#### Verified
+
+- `npm run test -w frontend` → **13 passed** (new)
+- `npm run build -w frontend` → `tsc && vite build`, precache 19 entries
+- `npm run lint -w frontend` → 0 warnings
+- `npm run test -w contracts` → 20 passed
+- `npm run test -w backend` → 8 passed; `npm run build -w backend` → clean
+- Deploy: `vercel deploy --prod` → aliased **https://votechain-ivory.vercel.app**;
+  manifest + `sw.js` + all icons 200 over HTTPS; bundle wires the live Railway API
+  (evidence: `docs/evidence/2026-09-18_sprint3-mobile-pwa-anti-fragility.md`)
+
+#### Known boundaries
+
+- Offline ≠ offline voting. Casting requires connectivity (nullifier + chain path);
+  offline this sprint is cached browsing + honest stale labels + reconnect-to-vote
+  (ADR-007). Offline ballot packs (ADR-006 Option B) are the next-level milestone.
+- Physical Android install/browse/recovery behaviour is covered by
+  `docs/runbooks/android-pwa-test.md` — pending the on-device pass.
+
+---
 
 #### Added
 

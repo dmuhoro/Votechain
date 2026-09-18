@@ -13,4 +13,6 @@ Every claim in a sprint file must have evidence in `docs/evidence/` (Constitutio
 
 | Sprint | Theme | Status |
 |--------|-------|--------|
-| [Sprint 1](sprint-1-engineering-foundation.md) | Engineering Foundation + Deployment Readiness | In progress |
+| [Sprint 1](sprint-1-engineering-foundation.md) | Engineering Foundation + Deployment Readiness | Done |
+| [Sprint 2](sprint-2-hardening-and-readiness.md) | Hardening + Layer 5 LIVE on Sepolia/Railway/Vercel | Done |
+| [Sprint 3](sprint-3-mobile-anti-fragility.md) | Mobile-First Anti-Fragility (smart-phone PWA) | Done |
