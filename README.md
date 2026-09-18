@@ -73,6 +73,78 @@ Live proof (evidence: `docs/evidence/2026-09-17_layer5-live-end-to-end.md`): pro
 OTP → register → admin verify → cast → Sepolia tx `0xb1d3f344…` (block 11724916, SUCCESS)
 → results show Candidate A: 1 → re-vote attempt rejected with **HTTP 409**.
 
+---
+
+## Capabilities & strengths (latest — Sprint 4, 2026-09-18)
+
+Everything below is live, SSH-signed, and backed by reproducible evidence in
+`docs/evidence/` (each claim maps to a gate that produced the observed output).
+
+### 1. Fully offline ballot capture — votes survive zero connectivity (ADR-008)
+
+A voter does **not** need a signal to vote. The PWA is a real polling station in
+the phone:
+
+- **Signed ballot provisioning (online, one tap).** While connected, the app asks
+  the server for a *signed voucher* — a cryptographically bound,
+  per-election/per-voter ballot that carries the sealed candidate options and an
+  expiry. The server records it `issued` and nothing about your choice is sent yet.
+- **Airplane-mode capture.** With the device fully offline (`navigator.onLine =
+  false`), the voter picks a candidate and the vote is written to a **private,
+  signed vault on the device** (`localStorage` `vc_offline_vouchers` /
+  `vc_offline_ballots`). The ballot never leaves the phone while offline — there is
+  no "callback to the server later", no private ballot box in between.
+- **Optional / guaranteed capture.** The same signed voucher is re-usable if the
+  vault is wiped; the app re-resolves it, so a first capture never needs a
+  pre-existing ballot or a second trip online.
+- **Zero-trust reconnect.** The moment the device comes back online, a global
+  `OfflineSync` (mounted once at app level, not just on the one page) **auto-submits**
+  the captured ballot through the *exact same server path* as an online vote —
+  signed voucher → server `consumed` → relayer → Sepolia. The vault flips to
+  `submitted` with a real `txHash`; the server voucher flips to `consumed` with a
+  `consumed_at`. Duplicate submissions are rejected (`409`), not silently dropped
+  (ADR-008 / ADR-001 Articles I.4, I.6).
+- **Provable after the fact.** After reconnect the vote is on-chain: `VotedCast`
+  event with the voter's nullifier signature, broadcast by the relayer, receipt
+  `status 0x1`, in the same block as any online vote.
+
+> On-device PASS (physical Android phone, 2026-09-18):
+> offline cold boot → signed ballot → airplane ON → capture → reconnect →
+> auto-submit → voucher consumed → VotedCast on Sepolia (block 11731807).
+> Evidence: `docs/evidence/2026-09-18_sprint4-offline-device-pass.md`.
+
+### 2. Double-vote resistance at two boundaries (ADR-003, Article II)
+
+- **Fast boundary:** a Supabase `nullifier` table rejects replays with HTTP 409 the
+  moment a second attempt arrives — no relayer gas is spent on duplicates.
+- **Authority boundary:** the chain's own `alreadyVoted` (nullifier mapping) is the
+  final backstop — even a forged relay of the same nullifier cannot mint a second
+  count. The offline flow keeps the same invariant: one voucher, one `consumed`, one
+  nullifier, one vote on-chain.
+
+### 3. No wallet, no gas, no install — but real on-chain receipts
+
+Voters use plain OTP (email today; USSD/SMS scoped in ADR-006) and the *relayer*
+pays gas. Voters literally cannot lose funds or keys; the platform keeps the
+security properties of a self-custody vote (signed nullifier, on-chain log) without
+the self-custody UX tax.
+- Each vote returns a receipt with the on-chain `txHash` a voter can verify on
+  Etherscan/Sepolia (block + `VotedCast`).
+- Every result is recomputable by anyone from the contract — no database edit can
+  change the public count (Article I.4/I.5).
+- Live stats, results, and the audit trail all come from the source of truth.
+
+### 4. Physical-device-first engineering (ADR-006 / ADR-007)
+
+- Installed PWA on a **real Android phone** (WebAPK, standalone, offline-capable) —
+  the target device, not a desktop emulator.
+- Mobile-first touch UI (44px targets, safe-area, bottom nav), no white screens, no
+  silent drops: reconnect fail-fast, in-flight double-submit guard, "stale data"
+  labels when offline.
+- Backend on Railway, contract on Sepolia, DB + auth in Supabase — all three gates
+  verified live end-to-end (contract 20/20, backend 8/8 + build, frontend 21/21 +
+  build + lint 0 warnings).
+
 ## How a vote works
 
 ```mermaid

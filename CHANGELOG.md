@@ -1,9 +1,32 @@
+
+## [1.1.0] — 2026-09-18
+
+### Sprint 4 — Offline Ballot Capture (ADR-008, full device pass)
+
+- **Device PASS (physical Android)** — signed voucher issued → airplane-on
+  capture (device vault only) → reconnect auto-submit → server voucher
+   → VotedCast on Sepolia (block 11731807). Full evidence:
+  docs/evidence/2026-09-18_sprint4-offline-device-pass.md
+- supabase migration  (voucher table + RLS,
+  applied)
+- backend offline ballot service + routes (,
+  ) — shared cast path (ADR-008 Layer 1)
+- frontend offline vault + OfflineSync global mount (auto-submit on
+  reconnect from any page) + BallotPage first-capture signed-voucher fix
+
 # Changelog
 
 > All notable changes to VoteChain. Follows
 > [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) conventions. Newest first.
 
 ---
+
+## [1.1.0] — 2026-09-18
+
+### ADR-008 — Offline ballot capture (full device pass)
+
+- Physical-device **PASS** (Sprint 4, Sprint-4-offline-device-pass evidence): route captured offline offline via voucher first-capture, auto-submit on reconnect, server voucher `consumed`, Relaychain `VotedCast(tx 0x41264…)` on Sepolia.
+- Global `OfflineSync` mount so reconnect auto-sync runs from any page.
 
 ## [Unreleased]
 
