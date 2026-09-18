@@ -1,0 +1,25 @@
+Prod /verify-otp defect found on device and fixed:
+
+Finding (2026-09-18):
+  deployed POST /api/auth/verify-otp with a FRESH prod-generated magic-link OTP:
+    prod otp: 25503678 (8 digits)
+    deployed verify-otp: 400 in 863 ms -> {"message":"Email link is invalid or has expired"}
+  same OTP via supabase-js verifyOtp({email, token, type:"email"}) against prod: OK.
+  => the route's heuristic token.length > 6 misrouted 8-digit prod OTPs (local/dev GoTrue
+     emits 6-digit) into the magiclink(token_hash) branch.
+
+Fix (packages/backend/src/routes/auth.ts):
+  isNumericOtp = /^\d{6,8}$/.test(token)  ->  {email, token, type:"email"}
+  else                                    ->  {token_hash, type:"magiclink"}
+  Rationale in code comment; length heuristic removed.
+
+Local verification of the fix against PROD project (PORT 3999, prod SUPABASE_URL/SERVICE_ROLE_KEY):
+  prod otp = 09431681 (len 8)
+  {"message":"Successfully verified OTP","session":{...,"user":{...,"email":"probe-fix@local.votechain"}}}
+
+Deploy: railway up -y -d  ->  backend online (rate/health OK)
+  deployed verify-otp: 200 in 1607 ms
+  OK session for probe-fix@local.votechain
+
+Note: probe accounts probe-verify@local.votechain / probe-fix@local.votechain were created in
+prod Supabase auth during route probing (not voters; no election rows).

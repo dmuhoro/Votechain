@@ -78,17 +78,17 @@ router.post("/verify-otp", async (req: Request, res: Response) => {
   try {
     const { email, token } = verifyOtpSchema.parse(req.body);
 
-    // Modern GoTrue (v2.195+) stores magic-link tokens in `one_time_tokens` and
-    // requires verifying via `token_hash` (no `email`/`token`). The `{email,
-    // token}` path only matches legacy `users.confirmation_token`/`recovery_token`
-    // columns, which are empty in the new scheme. Numeric OTPs (6-digit) still
-    // verify via `{email, token, type: "email"}`.
-    const isMagicLink = token.length > 6;
+    // Distinguish a numeric OTP from a magic-link token_hash by format, not
+    // length: prod GoTrue emits 8-digit codes, local/dev emits 6-digit ones,
+    // and magic-link tokens are long opaque strings. A length heuristic
+    // (>6) misroutes an 8-digit OTP into the magiclink branch — observed
+    // live as "Email link is invalid or has expired" for a valid code.
+    const isNumericOtp = /^\d{6,8}$/.test(token);
 
     const { data, error } = await authSupabase.auth.verifyOtp(
-      isMagicLink
-        ? { token_hash: token, type: "magiclink" }
-        : { email, token, type: "email" }
+      isNumericOtp
+        ? { email, token, type: "email" }
+        : { token_hash: token, type: "magiclink" }
     );
 
     if (error) {
