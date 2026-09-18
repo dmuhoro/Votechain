@@ -29,10 +29,13 @@ export const useVote = () => {
     try {
       setIsSubmitting(true);
       setError(null);
+      // Chain submission (relayer tx + confirmation) legitimately outlives the
+      // 15s default axios timeout; observed on-device as a spurious "Request
+      // timed out" even though the vote landed. Give the write a real window.
       const response = await api.post('/api/votes/cast', {
         electionId,
         candidateId,
-      });
+      }, { timeout: 60000 });
       return response.data;
     } catch (err: any) {
       const errorMessage = isApiError(err)
