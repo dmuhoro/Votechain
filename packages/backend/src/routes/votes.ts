@@ -1,15 +1,9 @@
 import { Router, Request } from 'express';
 import { z } from 'zod';
-import { protect } from '../middleware/authMiddleware';
-import { relayerService } from '../services/relayerService';
-import {
-  generateNullifier,
-  checkNullifier,
-  storeNullifier,
-  isAlreadyVotedError,
-} from '../services/nullifierService';
-import { supabase } from '../services/supabaseService';
 import { ethers } from 'ethers';
+import { protect } from '../middleware/authMiddleware';
+import { castVote, VoteError } from '../services/voteService';
+import { supabase } from '../services/supabaseService';
 import { SEPOLIA_RPC_URL, CONTRACT_ADDRESS, SEPOLIA_EXPLORER } from '../config';
 import VoteChainArtifact from '../artifacts/VoteChain.json';
 
@@ -46,91 +40,27 @@ router.post('/cast', protect, async (req: AuthenticatedRequest, res) => {
       return res.status(403).json({ message: 'Voter is not verified.' });
     }
 
-    // 0. Translate Supabase DB election id to on-chain election id.
-    // The frontend addresses elections by the Supabase `elections.id` serial,
-    // but VoteChain.sol keys elections by `chain_election_id` (its own counter).
-    // Using the DB id as a chain id only works by coincidence when both start at 1.
-    const { data: electionRow, error: electionError } = await supabase
-      .from('elections')
-      .select('chain_election_id')
-      .eq('id', electionId)
-      .single();
+    // Real submission path: shared with the offline reconciliation route so
+    // an offline ballot is submitted through the identical code as an online
+    // vote (Constitution Article II; ADR-008 §3).
+    const result = await castVote(req.user.id, electionId, candidateId);
 
-    if (electionError || !electionRow) {
-      if (electionError && electionError.code === 'PGRST116') {
-        return res.status(404).json({ message: 'Election not found in database.' });
-      }
-      return res.status(500).json({ message: electionError?.message || 'Failed to resolve election.' });
-    }
-    const chainElectionId = electionRow.chain_election_id;
-
-    // 1. Generate nullifier (deterministic per voter + election)
-    const nullifier = generateNullifier(req.user.id, electionId);
-
-    // 2. Fast pre-check: nullifier must not already be recorded (Article II.2 boundary a)
-    await checkNullifier(electionId, nullifier);
-
-    // 3. Submit transaction via relayerService with the chain-facing election id.
-    //    Article II.3: the nullifier DB row is written ONLY after the on-chain
-    //    submission succeeds, so a failed chain transaction can be retried
-    //    without permanently burning the nullifier.
-    let txHash: string;
-    let blockNumber: number;
-    try {
-      ({ txHash, blockNumber } = await relayerService.submitVote(
-        chainElectionId,
-        candidateId,
-        nullifier
-      ));
-    } catch (error: any) {
-      if (isAlreadyVotedError(error)) {
-        return res.status(409).json({ message: 'Voter has already cast a vote in this election.' });
-      }
-      throw error;
-    }
-
-    // 3b. Record the nullifier now that the vote is on-chain (Article II.2 boundary a,
-    //     race-safe via ON CONFLICT DO NOTHING backstop). If this write fails, the
-    //     on-chain nullifier mapping (boundary b, authoritative) still blocks a replay.
-    try {
-      await storeNullifier(electionId, nullifier);
-    } catch (nullifierError) {
-      console.error(
-        'Failed to store nullifier in DB after on-chain success (chain still guards):',
-        nullifierError
-      );
+    if (result.warnings?.nullifierDbWarning) {
       res.set('X-VoteChain-Nullifier-Db-Warning', 'true');
-    }
-
-    // 4. Store vote_record in Supabase
-    const { error: voteRecordError } = await supabase
-      .from('vote_records')
-      .insert({
-        election_id: electionId,
-        tx_hash: txHash,
-        nullifier_hash: nullifier,
-        block_number: blockNumber,
-      });
-
-    if (voteRecordError) {
-      // If storing vote record fails, we should ideally have a mechanism to revert the nullifier
-      // or at least log this for manual intervention, as the vote was sent on-chain.
-      console.error('Failed to store vote record in DB:', voteRecordError);
-      // Still return success as the on-chain transaction was successful
     }
 
     res.status(200).json({
       message: 'Vote cast successfully',
-      txHash,
-      blockNumber,
-      explorerUrl: `${SEPOLIA_EXPLORER}/tx/${txHash}`,
+      txHash: result.txHash,
+      blockNumber: result.blockNumber,
+      explorerUrl: result.explorerUrl,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.errors });
     }
-    if (error.statusCode === 409) {
-      return res.status(409).json({ message: error.message || 'Voter has already cast a vote in this election.' });
+    if (error instanceof VoteError) {
+      return res.status(error.statusCode).json({ message: error.message });
     }
     console.error('Error casting vote:', error);
     res.status(500).json({ message: error.message || 'Failed to cast vote' });
