@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import api, { toErrorMessage, isApiError } from '../lib/api';
 import { VoteReceipt } from '../types';
 import { useNetworkStore } from '../store/networkStore';
@@ -6,8 +6,17 @@ import { useNetworkStore } from '../store/networkStore';
 export const useVote = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // In-flight guard: even two rapid taps on Confirm before React re-renders
+  // cannot fire a second /votes/cast. The backend nullifier still blocks a
+  // replay, but this prevents the wasted second transaction + API call.
+  // (Constitution Article II double-vote invariant; defense in depth.)
+  const isSubmittingRef = useRef(false);
 
   const castVote = async (electionId: number, candidateId: number): Promise<VoteReceipt | null> => {
+    if (isSubmittingRef.current) {
+      return null;
+    }
+
     // Fail fast when the browser already knows we are offline. The nullifier +
     // chain vote path cannot run without connectivity; a queued "offline vote"
     // would be a silent drop (Constitution Article I.6). No silent drops.
@@ -16,6 +25,7 @@ export const useVote = () => {
       return null;
     }
 
+    isSubmittingRef.current = true;
     try {
       setIsSubmitting(true);
       setError(null);
@@ -32,6 +42,7 @@ export const useVote = () => {
       console.error('Error casting vote:', err);
       return null;
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

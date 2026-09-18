@@ -58,6 +58,14 @@ const ElectionsPage: React.FC = () => {
         ))}
       </div>
 
+      {/* Offline cached-data strip */}
+      {!isOnline && elections.length > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-700 bg-amber-950 px-4 py-3 text-sm text-amber-200">
+          These elections are from your saved cache. Data refreshes automatically when you&apos;re
+          back online.
+        </div>
+      )}
+
       {/* Elections Grid */}
       {isLoading ? (
         <div className="py-12 text-center">

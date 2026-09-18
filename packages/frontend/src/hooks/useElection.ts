@@ -1,6 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import api, { toErrorMessage } from '../lib/api';
 import { useElectionStore } from '../store/electionStore';
+import { useNetworkStore } from '../store/networkStore';
 
 export const useElection = () => {
   const {
@@ -14,7 +15,12 @@ export const useElection = () => {
     setError,
   } = useElectionStore();
 
+  const isOnline = useNetworkStore((s) => s.isOnline);
+  const inFlight = useRef(false);
+
   const fetchElections = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       setIsLoading(true);
       setError(null);
@@ -24,6 +30,7 @@ export const useElection = () => {
       setError(toErrorMessage(err, 'Failed to load elections'));
     } finally {
       setIsLoading(false);
+      inFlight.current = false;
     }
   }, [setElections, setIsLoading, setError]);
 
@@ -43,6 +50,14 @@ export const useElection = () => {
   useEffect(() => {
     fetchElections();
   }, [fetchElections]);
+
+  // The moment connectivity returns, refresh so cached/offline data is replaced
+  // with live on-chain backed data without a manual refresh.
+  useEffect(() => {
+    if (isOnline) {
+      fetchElections();
+    }
+  }, [isOnline, fetchElections]);
 
   return {
     elections,

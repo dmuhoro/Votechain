@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api, { toErrorMessage } from '../lib/api';
+import { useNetworkStore } from '../store/networkStore';
 import { VoteReceipt } from '../types';
 import TxHashBadge from '../components/TxHashBadge';
 import Button from '../components/ui/Button';
@@ -10,6 +11,7 @@ import PageShell from '../components/PageShell';
 const ReceiptPage: React.FC = () => {
   const { txHash } = useParams<{ txHash: string }>();
   const navigate = useNavigate();
+  const isOnline = useNetworkStore((s) => s.isOnline);
   const [receipt, setReceipt] = useState<VoteReceipt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,11 @@ const ReceiptPage: React.FC = () => {
           <h1 className="mb-2 text-2xl font-bold text-green-200 md:text-3xl">Vote Confirmed</h1>
           <p className="text-green-300">Your vote has been permanently recorded on the blockchain.</p>
         </Card>
+        {!isOnline && (
+          <p className="mb-4 text-center text-sm text-amber-300">
+            Offline — this receipt is from your saved cache and is still on-chain and verifiable.
+          </p>
+        )}
 
         {receipt && (
           <Card className="space-y-6">
