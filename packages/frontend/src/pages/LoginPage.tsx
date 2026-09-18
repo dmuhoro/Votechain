@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await getSupabase().auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,

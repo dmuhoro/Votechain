@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
+import { safeStorage, AUTH_TOKEN_KEY } from '../lib/storage';
 import { Voter } from '../types';
 
 interface AuthStore {
@@ -10,7 +11,7 @@ interface AuthStore {
   setToken: (token: string | null) => void;
   setIsLoading: (loading: boolean) => void;
   logout: () => void;
-  initialize: () => void;
+  initialize: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -20,41 +21,54 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setUser: (user) => set({ user }),
   setToken: (token) => {
     if (token) {
-      localStorage.setItem('authToken', token);
+      safeStorage.setString(AUTH_TOKEN_KEY, token);
     } else {
-      localStorage.removeItem('authToken');
+      safeStorage.remove(AUTH_TOKEN_KEY);
     }
     set({ token });
   },
   setIsLoading: (loading) => set({ isLoading: loading }),
   logout: () => {
-    localStorage.removeItem('authToken');
+    safeStorage.remove(AUTH_TOKEN_KEY);
     set({ user: null, token: null });
   },
   initialize: async () => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      set({ token });
+    // Restore whatever we already know from storage first so the UI has a
+    // session-consistent view even if Supabase is unreachable (offline boot).
+    const storedToken = safeStorage.getString(AUTH_TOKEN_KEY);
+    if (storedToken) {
+      set({ token: storedToken });
     }
 
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
+    try {
+      const { data, error } = await getSupabase().auth.getSession();
+      if (error) throw error;
+      const session = data.session;
 
-    if (session) {
-      const { user } = session;
-      localStorage.setItem('authToken', session.access_token);
+      if (!session) {
+        safeStorage.remove(AUTH_TOKEN_KEY);
+        set({ user: null, token: null });
+        return;
+      }
+
+      safeStorage.setString(AUTH_TOKEN_KEY, session.access_token);
       set({
         token: session.access_token,
         user: {
-          id: user.id,
-          email: user.email || '',
+          id: session.user.id,
+          email: session.user.email || '',
           is_verified: false,
           is_admin: false,
           needsRegistration: true,
         },
       });
+    } catch {
+      // Offline / Supabase unreachable: keep the stored session state and the
+      // app bootable. The user can browse cached data; auth actions (OTP) will
+      // surface a clear reconnect error when the network returns.
+      set({ token: storedToken ?? null });
+    } finally {
+      set({ isLoading: false });
     }
-
-    set({ isLoading: false });
   },
 }));

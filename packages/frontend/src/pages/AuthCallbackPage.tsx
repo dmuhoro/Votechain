@@ -1,42 +1,87 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+
+const CALLBACK_TIMEOUT_MS = 20000;
 
 const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const { setUser, setToken } = useAuthStore();
+  const [error, setError] = useState<string | null>(null);
+  const attempted = useRef(false);
 
   useEffect(() => {
+    if (attempted.current) return;
+    attempted.current = true;
+
+    let settled = false;
+
+    const finish = (handler: () => void) => {
+      if (settled) return;
+      settled = true;
+      handler();
+    };
+
+    const timeout = window.setTimeout(() => {
+      finish(() => setError('Sign-in timed out. Check your connection and try again.'));
+    }, CALLBACK_TIMEOUT_MS);
+
     const handleCallback = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const { data, error: sessionError } = await getSupabase().auth.getSession();
+        if (sessionError) throw sessionError;
 
-      if (error || !data.session) {
-        navigate('/login', { replace: true });
-        return;
+        if (!data.session) {
+          finish(() => navigate('/login', { replace: true }));
+          return;
+        }
+
+        const session = data.session;
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          is_verified: false,
+          is_admin: false,
+          needsRegistration: true,
+        });
+
+        finish(() => navigate('/', { replace: true }));
+      } catch {
+        finish(() => setError('Could not complete sign-in. Check your connection and try again.'));
+      } finally {
+        window.clearTimeout(timeout);
       }
-
-      const session = data.session;
-      const { user } = session;
-
-      setToken(session.access_token);
-      setUser({
-        id: user.id,
-        email: user.email || '',
-        is_verified: false,
-        is_admin: false,
-        needsRegistration: true,
-      });
-
-      navigate('/', { replace: true });
     };
 
     handleCallback();
+    return () => window.clearTimeout(timeout);
   }, [navigate, setUser, setToken]);
 
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 p-6">
+        <div className="w-full max-w-md rounded-lg bg-gray-800 p-8 text-center shadow-lg">
+          <h1 className="text-lg font-semibold text-red-400">Sign-in did not complete</h1>
+          <p className="mt-3 text-sm text-gray-300">{error}</p>
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={() => navigate('/login', { replace: true })}
+              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
+            >
+              Back to login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center">
-      <p className="text-gray-400">Completing sign in...</p>
+    <div className="flex min-h-screen items-center justify-center bg-gray-900">
+      <p className="animate-pulse text-gray-400">Completing sign in...</p>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import api from '../lib/api';
+import api, { toErrorMessage } from '../lib/api';
 import { useElectionStore } from '../store/electionStore';
 
 export const useElection = () => {
@@ -21,8 +21,7 @@ export const useElection = () => {
       const response = await api.get('/api/elections');
       setElections(response.data);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to load elections';
-      setError(msg);
+      setError(toErrorMessage(err, 'Failed to load elections'));
     } finally {
       setIsLoading(false);
     }
@@ -35,8 +34,7 @@ export const useElection = () => {
       const response = await api.get(`/api/elections/${id}`);
       setSelectedElection(response.data);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to load election';
-      setError(msg);
+      setError(toErrorMessage(err, 'Failed to load election'));
     } finally {
       setIsLoading(false);
     }
