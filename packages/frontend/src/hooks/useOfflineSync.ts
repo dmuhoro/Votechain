@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api, { isApiError } from '../lib/api';
 import { useNetworkStore } from '../store/networkStore';
 import {
@@ -17,19 +17,24 @@ export interface CapturedInput {
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
+// Module-level: both the global manager (App) and the /offline page mount this
+// hook. The lock guarantees only ONE submission pass at a time — two parallel
+// submit calls would let one consume the voucher and the other race into
+// 'duplicate' rejected for a vote that actually counted (Article I.1).
+let syncLock = false;
+
 /**
  * Offline ballot sync (ADR-008). Captured ballots are submitted through the
  * SAME server path as an online vote (POST /api/offline/ballots/submit →
  * voteService.castVote → relayer → chain). Sync runs automatically when the
- * device comes back online and on demand via syncNow().
+ * device comes back online, on mount when already online, and on demand.
  */
 export const useOfflineSync = () => {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [lastMessage, setLastMessage] = useState<string | null>(null);
-  const syncingRef = useRef(false);
 
   const syncNow = useCallback(async (): Promise<string | null> => {
-    if (syncingRef.current) return null;
+    if (syncLock) return null;
     const pending = listCapturedBallots();
     if (pending.length === 0) {
       setStatus('idle');
@@ -37,7 +42,7 @@ export const useOfflineSync = () => {
       return null;
     }
 
-    syncingRef.current = true;
+    syncLock = true;
     setStatus('syncing');
     let message: string | null = null;
     try {
@@ -77,12 +82,14 @@ export const useOfflineSync = () => {
       setLastMessage(err instanceof Error ? err.message : 'Offline sync failed.');
       return null;
     } finally {
-      syncingRef.current = false;
+      syncLock = false;
     }
   }, []);
 
   useEffect(() => {
-    let lastOnline = useNetworkStore.getState().isOnline;
+    // Mounted with `false` so the first invocation treats the (possibly
+    // already-online) mount as offline→online and drains pending captures.
+    let lastOnline = false;
     const maybeSync = () => {
       const online = useNetworkStore.getState().isOnline;
       if (online && !lastOnline) {
@@ -90,6 +97,7 @@ export const useOfflineSync = () => {
       }
       lastOnline = online;
     };
+    maybeSync();
     const unsubscribe = useNetworkStore.subscribe(maybeSync);
     return () => {
       unsubscribe();

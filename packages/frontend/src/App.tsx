@@ -14,6 +14,7 @@ import ResultsPage from './pages/ResultsPage';
 import ReceiptPage from './pages/ReceiptPage';
 import AdminPage from './pages/AdminPage';
 import OfflinePage from './pages/OfflinePage';
+import OfflineSync from './components/OfflineSync';
 
 const AppRouter: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const AppRouter: React.FC = () => {
 
   return (
     <>
+      <OfflineSync />
       <OfflineBanner />
       <Routes>
         <Route path="/" element={<LandingPage />} />

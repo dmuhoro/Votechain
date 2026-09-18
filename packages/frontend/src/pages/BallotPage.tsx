@@ -6,6 +6,7 @@ import { useNetworkStore } from '../store/networkStore';
 import { useAuthStore } from '../store/authStore';
 import {
   saveSignedVoucher,
+  getSignedVoucher,
   getOfflineBallot,
   captureOfflineBallot,
   removeOfflineBallot,
@@ -105,25 +106,33 @@ const BallotPage: React.FC = () => {
     // Offline: capture the ballot on-device instead of failing. Submission
     // happens automatically on reconnect THROUGH the real cast path.
     if (!isOnline) {
+      // First capture uses the signed voucher that was provisioned while
+      // online (ADR-008); a later re-capture after reload reuses the vaulted
+      // ballot so the voter can change their selection before it submits.
       const existing = getOfflineBallot(Number(electionId));
-      if (!existing) {
+      const signed = getSignedVoucher(Number(electionId));
+      const voucherRaw = existing?.voucher ?? signed;
+      if (!user?.id || !voucherRaw) {
         setError(
           'No offline ballot is available on this device. Reconnect once to download a signed ballot, then it can be captured offline.',
         );
         return;
       }
+      const voucher = voucherRaw;
       captureOfflineBallot({
-        voterId: user?.id ?? existing.voterId,
+        voterId: user.id,
         electionId: Number(electionId),
         candidateId: selectedCandidateId,
-        voucher: existing.voucher,
+        voucher,
         capturedAt: new Date().toISOString(),
         status: 'captured',
+        electionTitle: `Election #${electionId}`,
+        candidateName: candidates.find((c) => c.id === selectedCandidateId)?.name,
       });
       setOfflineCaptured({
         electionId: Number(electionId),
         candidateId: selectedCandidateId,
-        voucher: existing.voucher,
+        voucher,
         electionTitle: `Election #${electionId}`,
         candidateName: candidates.find((c) => c.id === selectedCandidateId)?.name,
       });
