@@ -1,0 +1,5 @@
+1-Elections OK
+2-Results OK
+3-Results OK, 4-Receipt OK
+5-Vote: unauth vote routed to /login, no crash
+6,7,8 offline OK

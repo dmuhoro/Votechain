@@ -23,6 +23,12 @@ invariant.
   failed with "no test files found").
 - All gates green: contracts **20/20**, backend **8/8** + build, frontend build + lint
   (0 warnings) + **13/13**.
+- **On-device round (2026-09-18):** full Android PWA function-test matrix **PASSES** on the
+  installed WebAPK (standalone, offline cold boot, cached browsing, reconnect recovery,
+  zero exceptions), and **two real on-chain votes were cast from the phone** with no
+  unsigned paths. Three more prod bugs found and fixed: the 15 s cast timeout → 60 s,
+  a Vercel CLI deploy that silently dropped `VITE_` envs, and `/verify-otp` rejecting
+  valid 8-digit prod OTPs (length heuristic).
 
 ## Summary table
 
@@ -37,8 +43,48 @@ invariant.
 | Vote path fails fast offline / no double-submit | ✅ | same (useVote guard tests) |
 | Mobile-first UI (bottom nav, safe areas, 44 px targets, modal, chart) | ✅ | same |
 | Frontend vitest suite | ✅ 13/13 | output in evidence |
-| Physical Android device test runbook | ✅ ready | `docs/runbooks/android-pwa-test.md` |
+| Physical Android device pass (install/offline/vote/no-crash) | ✅ passed | `2026-09-18_sprint3-phone-device-pass.md` + `device-test/` |
 | Offline ballot-pack voting (ADR-006 Option B) | ⛔ next milestone | ADR-006 / ADR-007 (descoped) |
+
+## On-device results (round 2 — 2026-09-18)
+
+Device: Xiaomi ("dew"), Android 16, Chrome 152, installed PWA (WebAPK, `display-mode:
+standalone`, no URL bar). Full matrix + raw snapshots:
+`docs/evidence/2026-09-18_sprint3-phone-device-pass.md` and `docs/evidence/2026-09-18_device-test/`.
+
+- **PWA install/standalone**: ✅ installed from the browser menu; launches full-screen as
+  `SameTaskWebApkActivity`.
+- **Offline cold boot (airplane + force-stop + relaunch)**: ✅ app shell renders from SW
+  precache; cached `/elections` and `/results/1` show honest "stale/last synced" labels;
+  ballot cast fails fast with **"Reconnect to vote."**; releasing the airplane toggle
+  clears the banner without a reload.
+- **Real votes from the phone** (Work Election 2027): B by the operator
+  (`0x4e4c177e…876c7`, block 11730996) and C by alice (`0x6e194960f98c…`, block 11731055);
+  receipts render on-device; final tallies A=1, B=1, C=1. Relayer path, no wallet on device.
+- **Sweep**: final navigation pass across `/`, `/login`, `/register`, `/elections`,
+  `/elections/1`, `/results/1`, `/receipt/1`, `/admin`, `/auth/callback` — zero console
+  exceptions, zero failed loads.
+
+### Bugs found on-device and fixed (all live in prod)
+
+1. **Cast timeout too short (15 s).** The relayer confirm exceeds the `api.ts` default, so
+   the phone showed "Request timed out" while the vote had actually landed (server double-tap
+   guard held — exactly one vote). Fix: `useVote.ts` casts with `timeout: 60000` ms; the second
+   device vote completed with **"Vote confirmed"**.
+2. **Vercel CLI `--prod` deploy dropped `VITE_` envs** (bundle pointed at `localhost:3001` on
+   the phone). Working recipe: `vercel env pull`, write `^VITE_` lines to
+   `packages/frontend/.env.local`, build locally, `vercel build --prod` +
+   `vercel deploy --prebuilt --prod` + `vercel alias set … votechain-ivory.vercel.app`.
+   Prod now serves the correct bundle (`index-CSpFMtXi.js`).
+3. **`/verify-otp` rejected valid prod OTPs.** Prod GoTrue emits **8-digit** codes (local/dev
+   emit 6); the `token.length > 6` heuristic misrouted them into the magiclink branch →
+   "Email link is invalid or has expired". Fixed with a `^\d{6,8}$` format check in
+   `packages/backend/src/routes/auth.ts`; verified 200 against prod and deployed to Railway.
+
+### Fixed on device-pass (in earlier Sprint 3 commits)
+
+4. **Results polling wedge on offline PWA boot** (`5858f7f`) — confirmed clean during the
+   device offline cold-boot pass.
 
 ## Key fixes (Sprint 3)
 
@@ -112,8 +158,11 @@ invariant.
 - **Offline ballot packs (ADR-006 Option B)** are the next-level milestone: a new
   provisioning + reconciliation subsystem with its own trust model and design ADR
   (see ADR-007 for the boundary).
-- Physical Android testing on the user's device follows the runbook
-  (`docs/runbooks/android-pwa-test.md`); results loop back as an evidence follow-up.
-- SMS/USSD feature-phone channels remain ADR-006 Option A scope, not yet built.
+- **SMS/USFD feature-phone channels** remain ADR-006 Option A scope, not yet built.
+- **On-device matrix is the pass bar for THIS sprint** — it used verified test
+  identities; a broad hardware matrix (older Android, iOS, private-mode WebView) is
+  ongoing validation, not finished product testing.
+- `probe-verify@local.votechain` / `probe-fix@local.votechain` Supabase auth rows were
+  created while probing the OTP route; they are not voters and hold no election data.
 - P0s open: none. Remaining non-P0 enablers (Etherscan verify, CodeRabbit install)
   unchanged.

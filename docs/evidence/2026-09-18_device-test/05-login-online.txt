@@ -1,0 +1,2 @@
+On-device /login (installed PWA, online): email input rendered, submit button labelled "Continue".
+No username/password fields — relayer-magic-link auth pattern (Article I), correct.

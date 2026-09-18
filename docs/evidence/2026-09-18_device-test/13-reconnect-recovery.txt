@@ -1,0 +1,4 @@
+Reconnect recovery after offline cast attempt:
+- after releasing airplane mode: navigator.onLine = true, banner removed, results auto-refetch
+- cast guard now allows the ballot again (pre-check passed)
+Evidence: banner clears within one polling cycle; no manual reload needed.

@@ -1,0 +1,9 @@
+Installed PWA offline cold-boot (airplane ON + `am force-stop com.android.chrome` + relaunch from icon):
+- navigator.onLine = false
+- app shell (headline + tagline + "Offline mode" chip) rendered from SW precache
+- banner: "You're offline — showing the last synced data. Reconnect to cast a vote."
+- /results/1 (Work Election 2027): cached tallies from SW runtime cache + stale note
+- ballot (Candidate A/B/C options): tap Cast -> fail-fast inline error "Reconnect to vote."
+  (no silent drop, explicit reason — Article I.6)
+- RELEASE of airplane mode -> polled network flips online -> banner auto-clears.
+Zero exceptions across the whole offline/online transition (final monitor sweep empty).

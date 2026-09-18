@@ -1,0 +1,6 @@
+Navigation + error sweep on the installed PWA (final pass), page list:
+/, /login, /register, /elections, /elections/1, /results/1, /receipt/1, /admin, /auth/callback
+DevTools console exeptions: 0
+Uncaught errors: 0
+Network loadingFailed (excluding intentional offline test): 0
+No blank screens at any point; bottom nav present on mobile widths.

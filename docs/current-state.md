@@ -7,8 +7,9 @@
 
 **The full stack is live and proven end-to-end on Sepolia.** The contract is deployed and
 seeded on Sepolia, the backend runs on Railway, the frontend runs on Vercel as an
-**installable PWA**, live Supabase holds the read model, and a real vote was cast through
-the public URLs and confirmed on-chain — including live double-vote rejection (HTTP 409).
+**installable PWA**, live Supabase holds the read model, and **three real votes were cast
+through the public URLs and confirmed on-chain** — including two cast from the actual
+Android phone this session, plus live double-vote rejection (HTTP 409).
 
 | Layer | Service | URL / Address | Evidence |
 |-------|---------|---------------|----------|
@@ -32,9 +33,18 @@ the public URLs and confirmed on-chain — including live double-vote rejection 
   fail-fast, in-flight double-submit guard on the vote path
 - **Frontend vitest suite green (13 tests)** — storage (incl. private-mode WebView throw
   simulation), API error classification, network store
+- **On-device Android pass (2026-09-18)** — installed WebAPK standalone, offline cold
+  boot from SW precache + cached browse + "Reconnect to vote" fail-fast, banner-clear on
+  reconnect, zero exceptions on the final sweep, and **two real votes cast from the phone**
+  (B @ block 11730996, C @ block 11731055; tallies now A=1, B=1, C=1)
+- **Device-round fixes shipped** — cast timeout 15 s → 60 s (`useVote.ts`),
+  `/api/auth/verify-otp` 8-digit OTP detection (`packages/backend/src/routes/auth.ts`,
+  re-verified 200 against prod), Vercel CLI VITE-env loss (prebuilt deploy recipe in
+  the runbook)
 - **All gates green** — contracts 20/20, backend 8/8 + build, frontend build + lint
   (0 warnings) + 13/13
-- Docs: sprint-3 file, Android runbook, ADR-007, evidence file
+- Docs: sprint-3 file, Android runbook (with completed results table), ADR-007,
+  evidence files
 
 ### DONE (Sprint 2 — carried forward)
 
@@ -52,11 +62,11 @@ the public URLs and confirmed on-chain — including live double-vote rejection 
   boundary)
 - **SMS/USSD feature-phone voting** (ADR-006 Option A backend) — carrier gateway + SMS
   OTP channel, not built
-- **Physical Android device pass** — the PWA is deployed and verified over HTTPS, but
-  install/offline/recovery on the user's actual phone (per
-  `docs/runbooks/android-pwa-test.md`) is pending
+- **Broad device matrix** — the Sprint 3 accept bar (one Android phone, installed PWA
+  offline/recovery/vote) passed 2026-09-18; older Android / iOS / private-mode WebView /
+  low-memory devices are ongoing validation
 - Etherscan source verification of the deployed contract (no `ETHERSCAN_API_KEY` yet)
-- Real voter volume / load on the live endpoints (single probe vote only)
+- Real voter volume / load on the live endpoints (three votes to date)
 - CodeRabbit PR review (install needs the user's GitHub click at
   https://github.com/apps/coderabbit/installations/new)
 

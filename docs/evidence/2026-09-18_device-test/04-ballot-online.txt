@@ -1,0 +1,1 @@
+{"value":"← Back to Elections\nCast Your Vote\n\nSelect a candidate below. Your vote will be recorded on the blockchain.\n\nC\nCandidate A\n\nParty Alpha\n\nC\nCandidate B\n\nParty Beta\n\nC\nCandidate C\n\nParty Gamma\n\nSubmit Vote\nHome\nElections","exception":null}

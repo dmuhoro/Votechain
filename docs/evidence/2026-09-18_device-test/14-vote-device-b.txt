@@ -1,0 +1,8 @@
+Device real vote #1 (operator hellodannymuhoro@gmail.com, nationalId DEV-ONPHONE-2026, admin-verified):
+- ballot /elections/1 -> Candidate B -> confirm modal -> double-tap Confirm
+- client: "Request timed out" surfaced by the OLD 15s default cast timeout
+  (server already had the vote; double-tap guard => exactly ONE /votes/cast fired)
+- tx 0x4e4c177ed1dcca6769c1cb27c00320ab992842c3d8ce1ff35ef9ddbe760876c7
+  block 11730996 confirmations ~1, timestamp 2026-09-18
+- receipt page on-device rendered the tx + block
+Note: this vote surfaced the too-short cast timeout -> fixed to 60s (see useVote.ts commit).

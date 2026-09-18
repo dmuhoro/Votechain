@@ -1,0 +1,7 @@
+Installed-PWA window verification:
+- topResumedActivity = SameTaskWebApkActivity
+- navigator.matchMedia("(display-mode: standalone)").matches = true
+- no browser chrome nodes (no URL bar, no tab strip, no overflow menu)
+- page fills full screen; viewport covers device.
+
+Build running, no URL bar, standalone true.

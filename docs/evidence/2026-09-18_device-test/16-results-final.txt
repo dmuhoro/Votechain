@@ -1,0 +1,6 @@
+Final on-device results for Work Election 2027 (id 1) after all device votes:
+- Candidate A: 1 vote
+- Candidate B: 1 vote
+- Candidate C: 1 vote
+Total 3 votes; blocks 11724916 / 11730996 / 11731055 — the two device votes (B and C)
+are the newest two on-chain. Matches contract + Supabase vote_count.

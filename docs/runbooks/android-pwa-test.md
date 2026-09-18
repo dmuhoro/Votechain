@@ -74,21 +74,29 @@ Backend: https://backend-production-64d05.up.railway.app (contract Sepolia
 
 ## Results
 
+Executed 2026-09-18 on Xiaomi ("dew"), Android 16, Chrome 152.0.7977.82, installed
+WebAPK (same app window as a normal Chrome tab). Evidence:
+`docs/evidence/2026-09-18_sprint3-phone-device-pass.md` + `2026-09-18_device-test/`.
+
 | # | Step | PASS/FAIL | Note |
 |---|------|-----------|------|
-| A | Install as PWA | | |
-| B6 | Elections load | | |
-| B7 | Results render | | |
-| B8 | Receipt renders | | |
-| C10 | Offline launch, no blank screen | | |
-| C11 | Cached browse + stale label | | |
-| C12 | Admin renders offline | | |
-| D13 | Offline vote = honest fail-fast | | |
-| E14 | Banner clears on reconnect | | |
-| E15 | Retry recovers | | |
-| E16 | Online vote proceeds past guard | | |
-| F17 | Background/foreground stability | | |
-| F18 | Double-tap single submit | | |
+| A | Install as PWA | ✅ PASS | WebAPK `SameTaskWebApkActivity`; standalone, no URL bar; icon on home screen |
+| B6 | Elections load | ✅ PASS | Work Election 2027 from live backend |
+| B7 | Results render | ✅ PASS | Candidate bars + tallies (see tallies below) |
+| B8 | Receipt renders | ✅ PASS | tx + block + explorer link |
+| C10 | Offline launch, no blank screen | ✅ PASS | cold boot from SW precache; amber banner |
+| C11 | Cached browse + stale label | ✅ PASS | elections + results/1 from cache, "last synced" note |
+| C12 | Admin renders offline | ✅ PASS | renders with cached state; no crash |
+| D13 | Offline vote = honest fail-fast | ✅ PASS | "Reconnect to vote." inline; nothing written |
+| E14 | Banner clears on reconnect | ✅ PASS | auto-clears, no reload |
+| E15 | Retry recovers | ✅ PASS | results refetch live |
+| E16 | Online vote proceeds past guard | ✅ PASS | real cast landed (see below) |
+| F17 | Background/foreground stability | ✅ PASS | no stuck polling, no crash |
+| F18 | Double-tap single submit | ✅ PASS | exactly one cast; second tap ignored |
+
+Real votes cast from the phone this pass (Work Election 2027):
+Candidate B — tx `0x4e4c177ed1dcca6769c1cb27c00320ab992842c3d8ce1ff35ef9ddbe760876c7` @ block
+11730996; Candidate C — tx `0x6e194960f98c…` @ block 11731055. Final tallies A=1, B=1, C=1.
 
 Anything marked FAIL → report exact behavior + any console error (Chrome **⋮** →
 More tools → Developer tools? On Android use `chrome://inspect` or DevTools remote
@@ -98,5 +106,5 @@ debugging via USB), and we'll patch + redeploy.
 
 - Offline *ballot-pack voting* — that is the next-level milestone (ADR-006 Option B) and
   is deliberately out of scope for this sprint.
-- Real cast + OTP flow on-device (unchanged by this sprint; was proven live in
-  `2026-09-17_layer5-live-end-to-end.md`).
+- A broad hardware matrix (older Android, iOS, private-mode WebView). The on-device pass
+  above is the accept bar for **this** sprint; wider-device validation is ongoing.

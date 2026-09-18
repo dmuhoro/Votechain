@@ -1,0 +1,8 @@
+Device real vote #2 (alice@local.votechain, nationalId DEV-SECOND-2026, verified via operator admin token):
+- ballot /elections/1 -> Candidate C -> confirm modal -> single tap Confirm
+- on the FIXED build (cast timeout 60000 ms + Vercel env pinned)
+- UI: "Vote confirmed" success — NO timeout this time
+- tx 0x6e194960f98c…  (prefix; full hash + block shown on the on-device receipt)
+  block 11731055
+- receipt page on-device: tx hash, block, timestamp rendered
+Confirms the 60s cast fix: client no longer asks if vote "failed" after the relayer confirms.

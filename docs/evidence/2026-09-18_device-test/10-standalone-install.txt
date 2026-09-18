@@ -1,0 +1,9 @@
+PWA installed + launched standalone from the home-screen icon.
+topResumedActivity = com.android.chrome/org.chromium.chrome.browser.webapps.SameTaskWebApkActivity
+display-mode: CHECK navigator.matchMedia("(display-mode: standalone)") -> true
+No URL bar / no "Connection is secure" / no "New tab" nodes — full-screen standalone app window.
+
+Install steps (Chrome ⋮ menu -> "Install and create shortcut" -> dialog "VoteChain — Transparent. Tamper-proof. Trustless."
+https://votechain-ivory.vercel.app [Install/Cancel] -> Install) -> WebAPK installed
+(SameTaskWebApkActivity / ActivateWebApkActivity in Chrome package dump) -> "VoteChain" icon on home screen
+(bounds [191,871][360,1054]).

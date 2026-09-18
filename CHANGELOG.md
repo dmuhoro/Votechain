@@ -62,6 +62,17 @@
   in-flight guards make it fail fast with an explicit reason.
 - **201-module `ResultsChart`** was unusable on phones — responsive height + tick labels
   + table fallback.
+- **Cast timeout too short (15 s default)** read as "Request timed out" on-device while the
+  relayer confirmed; the vote actually landed. `useVote.ts` now casts with `timeout: 60000`;
+  the follow-up device vote completed with an explicit confirmed state.
+- **`/api/auth/verify-otp` rejected valid prod OTPs** — prod GoTrue emits 8-digit codes
+  (dev/local: 6); the `token.length > 6` heuristic misrouted them into the magiclink branch
+  ("Email link is invalid or has expired"). `isNumericOtp = /^\d{6,8}$/` fixes detection in
+  `packages/backend/src/routes/auth.ts`; verified 200 against prod and deployed.
+- **Vercel CLI `--prod` deploy silently dropped `VITE_` envs** (bundle pointed at
+  `localhost:3001`). Recipe: `vercel env pull` → `packages/frontend/.env.local` → build
+  locally → `vercel build --prod` + `vercel deploy --prebuilt --prod` + `vercel alias set`.
+- **Results polling wedge on offline PWA boot** from a cold standalone start (`5858f7f`).
 
 #### Changed
 
@@ -79,6 +90,12 @@
 - Deploy: `vercel deploy --prod` → aliased **https://votechain-ivory.vercel.app**;
   manifest + `sw.js` + all icons 200 over HTTPS; bundle wires the live Railway API
   (evidence: `docs/evidence/2026-09-18_sprint3-mobile-pwa-anti-fragility.md`)
+- **On-device Android pass (2026-09-18)** — installed WebAPK standalone: 11-point
+  function matrix PASS, offline cold boot from SW precache + "Reconnect to vote" fail-fast,
+  reconnect recovery, zero exceptions on final sweep, **two real on-chain votes cast from
+  the phone** (B @ `0x4e4c177e…876c7`/11730996, C @ `0x6e194960f98c…`/11731055);
+  deployed `/verify-otp` re-verified 200 with a fresh prod OTP
+  (evidence: `docs/evidence/2026-09-18_sprint3-phone-device-pass.md` + `2026-09-18_device-test/`)
 
 #### Known boundaries
 
@@ -86,7 +103,10 @@
   offline this sprint is cached browsing + honest stale labels + reconnect-to-vote
   (ADR-007). Offline ballot packs (ADR-006 Option B) are the next-level milestone.
 - Physical Android install/browse/recovery behaviour is covered by
-  `docs/runbooks/android-pwa-test.md` — pending the on-device pass.
+  `docs/runbooks/android-pwa-test.md`; **device pass completed 2026-09-18**.
+- Broader device matrix (older Android, iOS, private-mode WebView, low-memory devices)
+  remains ongoing validation, not product scope for this milestone.
+- SMS/USFD feature-phone channels remain ADR-006 Option A scope, not yet built.
 
 ---
 
