@@ -65,6 +65,25 @@ The offline path adds **provisioning** (vouchers) + **local staging** (device qu
 **reconciliation** (voucher consumption vs nullifier vs chain) — it does NOT add a second counting
 authority. The chain + `vote_records` remain the only tallies.
 
+### The dialer vote path (ADR-009): feature-phone SMS/USSD → the SAME shared cast path
+
+1. `POST /api/dialer/codes` (protect, verified, phone bound) — provisions a **6-digit one-time auth
+   PIN** (SHA-256 digest stored) bound to `{voter, election, bound phone}`, expiring, one active per
+   (voter, election) — the dialer analogue of the offline voucher.
+2. `POST /api/dialer/sms` — a carrier-gateway webhook shape (`From`, `Body`) that parses
+   `VOTE <electionCode> <candidate> <pin>` based on the number binding + PIN (NOT a vote before
+   authentication).
+3. Resolves election by `dial_code`, voter by bound phone, verifies PIN + open election + candidate,
+   then calls the **shared `voteService.castVote`** — identical code to online `POST /api/votes/cast`
+   — and consumes the PIN on success.
+4. `RECEIPT <voteCode>` / `GET /api/dialer/receipts/:code` — on-demand verification of a past vote by
+   a short receipt code, no voter identity.
+
+The dialer path adds **phone-binding identity**, **PIN provisioning**, **audit (`sms_intake_log`)**,
+and **receipt-by-code** — it does NOT add a second counting authority. Chain + `vote_records` remain
+the only tallies. Physical SMS delivery is behind the `SmsGateway` seam (simulated by default; Twilio/
+Africa's Talking adapters are documented stubs pending a carrier subscription).
+
 ### The admin path (owner-gated on-chain): `routes/admin.ts`
 
 - `POST /api/admin/elections/create` — on-chain `createElection` (**owner** wallet), then Supabase row.
@@ -119,7 +138,7 @@ authority. The chain + `vote_records` remain the only tallies.
 | Nullifier SELECT-then-INSERT race (TOCTOU) | P1 | ✅ DB UNIQUE backstop + graceful failure (ADR-002) | no |
 | Backend unit tests | P1 | ✅ Done (nullifier, voucher/path) | no |
 | Frontend component/unit tests | P2 | ✅ 14 vitest tests (incl. offline capture store) | no |
-| SMS/USSD feature-phone channel (ADR-006 Option A) | P2 | Not built — external carrier gateway credits needed | yes |
+| SMS/USSD feature-phone channel (ADR-006 Option A) | P2 | 🔨 Sprint 5 (ADR-009): dialer intake route + one-time PIN + audit log + receipt codes shipped; physical carrier delivery needs gateway credits | in progress |
 | Etherscan source verification | P2 | Not done — needs `ETHERSCAN_API_KEY` | yes |
 | Broad multi-device hardware matrix (older Android/iOS/private WebView) | P2 | Ongoing after single-device accept bar | yes |
 | CodeRabbit PR review | P2 | Pending user GitHub app install click | yes |

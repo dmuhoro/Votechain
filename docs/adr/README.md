@@ -9,6 +9,7 @@
 | [ADR-006](ADR-006-mobile-and-otp-reachability.md) | Mobile & OTP reachability (feature phones, online + offline), 80/20 estimate | Proposed | 2026-09-17 |
 | [ADR-007](ADR-007-smartphone-pwa-milestone.md) | Smart-phone PWA milestone (ADR-006 80/20: "mobile PWA feel" shipped) | Accepted | 2026-09-18 |
 | [ADR-008](ADR-008-offline-ballot-capture.md) | Offline ballot capture with one-time vouchers + on-reconnect reconciliation (ADR-006 Option B, smart-phone slice) | Accepted | 2026-09-18 |
+| [ADR-009](ADR-009-dialer-sms-vote-intake.md) | Dialer (SMS/USSD) vote intake with one-time auth PIN (ADR-006 Option A slice) | Accepted | 2026-09-19 |
 
 Linking rules: a change that contradicts an ADR must supersede it in the same commit. New decisions
 are added here as they are accepted.
