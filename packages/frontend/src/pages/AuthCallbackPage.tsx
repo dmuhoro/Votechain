@@ -47,6 +47,16 @@ const AuthCallbackPage: React.FC = () => {
           needsRegistration: true,
         });
 
+        // Hydrate authorization flags (is_verified / is_admin) from our API —
+        // the Supabase session does not carry them.
+        try {
+          const { getProfile, toVoter } = await import('../lib/auth');
+          const profile = await getProfile();
+          setUser(toVoter(profile));
+        } catch {
+          // Keep the session-derived user; a reload can retry hydration.
+        }
+
         finish(() => navigate('/', { replace: true }));
       } catch {
         finish(() => setError('Could not complete sign-in. Check your connection and try again.'));

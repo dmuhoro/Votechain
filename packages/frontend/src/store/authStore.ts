@@ -62,6 +62,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
           needsRegistration: true,
         },
       });
+
+      // Authorization flags live in our voters table, not the Supabase
+      // session. Hydrate them so verified-only and admin surfaces (dialer,
+      // admin nav) reflect server truth instead of a hardcoded false.
+      try {
+        const { getProfile, toVoter } = await import('../lib/auth');
+        const profile = await getProfile();
+        set({ user: toVoter(profile) });
+      } catch {
+        // Offline / transient failure: keep the session-derived base user so
+        // the app stays usable; a later action can retry hydration.
+      }
     } catch {
       // Offline / Supabase unreachable: keep the stored session state and the
       // app bootable. The user can browse cached data; auth actions (OTP) will
