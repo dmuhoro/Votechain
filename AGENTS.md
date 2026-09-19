@@ -59,6 +59,28 @@ If something is further from done than a prior doc suggests, say so plainly with
 file, failing command, stubbed function) rather than assuming it's fine. Update the offending doc in
 the same change.
 
+## 11. Documentation, Evidence & Push Are Automatic (Every Session)
+
+Closing out a work session is part of the work, not a follow-up request. **Every session that changes
+the repo ends the same way — no need to be asked:**
+
+1. **Gates green first.** Run the quality gates below; fix failures before anything else.
+2. **Evidence.** Write `docs/evidence/YYYY-MM-DD_<slug>.md` (raw command + observed output) and add
+   any on-device screenshots/snapshots under a dated subfolder. Add a row to
+   `docs/evidence/README.md`.
+3. **Sprint folder.** Update the active `docs/sprints/sprint-<N>-*.md` (Result table, gates, honest
+   boundaries). New capability → new sprint file + a row in `docs/sprints/README.md`.
+4. **State & release notes.** Update `docs/current-state.md`, `CHANGELOG.md` (SemVer section), and
+   `README.md` capabilities when a user-visible capability (or its status) changes.
+5. **Commit each piece individually**, SSH-signed (rule 7), each message naming the doc it updates
+   (rule 6). Never one giant "misc" commit.
+6. **Push clean changes to GitHub** and verify the remote HEAD matches local (`git status -sb`,
+   `gh api repos/<owner>/<repo>/commits/main`).
+7. **Stop** when the tree is clean, in sync, and every claim above is backed by a committed artifact.
+
+A change is not "done" until steps 1–6 have run. If a gate cannot be run, say so explicitly in the
+evidence file and mark it `PARTIAL`/`BLOCKED` — never silently skip.
+
 ---
 
 **Working tree layout:**
@@ -78,7 +100,8 @@ npm run test -w contracts      # contract suite (hardhat)
 npm run build -w backend       # tsc emits dist/
 npm run build -w frontend      # tsc && vite build
 npm run test -w backend        # vitest (API/unit)
+npm run test -w frontend       # vitest (component/lib)
 npm run lint -w frontend       # eslint --max-warnings 0
 ```
 
-All green, then commit each piece + evidence, then push.
+All green, then commit each piece + evidence, then push (rule 11).
