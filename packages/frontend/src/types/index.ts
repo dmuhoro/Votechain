@@ -9,6 +9,7 @@ export interface Voter {
 export interface Election {
   id: number;
   chain_election_id: number;
+  dial_code?: string | null;
   title: string;
   description: string;
   start_time: string;

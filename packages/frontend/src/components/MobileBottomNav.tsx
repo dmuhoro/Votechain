@@ -19,6 +19,7 @@ const MobileBottomNav: React.FC = () => {
     item('/', 'Home'),
     item('/elections', 'Elections'),
     item('/offline', 'Offline'),
+    item('/dialer', 'Dialer'),
     ...(user?.is_admin ? [item('/admin', 'Admin')] : []),
   ];
 

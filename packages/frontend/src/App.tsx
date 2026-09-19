@@ -14,6 +14,7 @@ import ResultsPage from './pages/ResultsPage';
 import ReceiptPage from './pages/ReceiptPage';
 import AdminPage from './pages/AdminPage';
 import OfflinePage from './pages/OfflinePage';
+import DialerPage from './pages/DialerPage';
 import OfflineSync from './components/OfflineSync';
 
 const AppRouter: React.FC = () => {
@@ -40,6 +41,7 @@ const AppRouter: React.FC = () => {
         <Route path="/results/:electionId" element={<ResultsPage />} />
         <Route path="/receipt/:txHash" element={<ReceiptPage />} />
         <Route path="/offline" element={<OfflinePage />} />
+        <Route path="/dialer" element={<DialerPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
