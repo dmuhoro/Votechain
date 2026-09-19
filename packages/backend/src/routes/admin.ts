@@ -77,6 +77,7 @@ router.post('/elections/create', protect, adminProtect, async (req, res) => {
       .from('elections')
       .insert({
         chain_election_id: chainElectionId,
+        dial_code: String(chainElectionId),
         title,
         description,
         start_time: startTime,

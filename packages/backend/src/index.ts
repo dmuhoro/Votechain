@@ -15,6 +15,7 @@ import voteRoutes from './routes/votes';
 import adminRoutes from './routes/admin';
 import statsRoutes from './routes/stats';
 import offlineRoutes from './routes/offline';
+import dialerRoutes from './routes/dialer';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/votes', voteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/offline', offlineRoutes);
+app.use('/api/dialer', dialerRoutes);
 
 // Health Check
 app.get('/api/health', (_req: Request, res: Response) => {
