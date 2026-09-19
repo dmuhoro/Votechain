@@ -1,4 +1,47 @@
 
+## [1.2.0] — 2026-09-19
+
+### Sprint 5 — Feature-Phone Dialer Reachability (ADR-009)
+
+#### Added
+
+- **Dialer vote intake** — `POST /api/dialer/sms` (carrier-gateway webhook shape) parses
+  `VOTE <electionCode> <candidateId> <pin>` and `RECEIPT <voteCode>`, then runs the **same**
+  `voteService.castVote` as online/offline — nullifier (boundary a) → relayer → chain
+  (boundary b) → `vote_records`. No second counting authority (Constitution Article II).
+- **One-time 6-digit auth PIN** — CSPRNG, SHA-256 digest stored, one active per (voter, election)
+  enforced by a partial unique index, expiring with the election; rotates in place when lost and
+  refuses after the vote is consumed. `POST /api/dialer/codes`, `GET|POST /api/dialer/phone`.
+- **Receipt codes** — `vote_records.vote_code` is a STORED generated column
+  (`V` + first 12 hex of the tx hash), so it can never drift; `RECEIPT` SMS and
+  `GET /api/dialer/receipts/:code` verify a vote with no voter identity.
+- **Audit** — every inbound command writes an explicit outcome to `sms_intake_log` (no silent
+  drops, Article I.6).
+- **Gateway seam** — `SmsGateway` interface + `SimulatedSmsGateway` default; Twilio / Africa's
+  Talking are explicit stubs that throw until configured. Physical delivery is honestly gated on
+  a carrier subscription + credits.
+- **Frontend `/dialer`** — bind a phone, provision a one-time PIN, copy the exact SMS command, and
+  verify a vote by receipt code; wired into routes and the mobile bottom nav.
+- **Migration** — `20260919090000_dialer_sms.sql` applied to prod Supabase (`voters.phone_number`,
+  `elections.dial_code`, `dialer_codes`, `sms_intake_log`, `vote_records.vote_code`, RLS).
+
+#### Verified
+
+- Live drill on the deployed backend: `VOTE 1 1 246810` → `voted`, receipt `V2E6A8BBA1009`, tx
+  `0x2e6a8bba…8295`, block **11737079**, `VoteCast(uint256,uint256,bytes32)`; PIN rotated and
+  replayed → `duplicate`, no second transaction.
+- Contracts `20/20`; backend build clean + `53/53`; frontend build clean + lint `0 warnings`
+  + `26/26`. Deployed: Railway `1e4bdc1e`, Vercel `votechain-ivory.vercel.app`.
+- Evidence: `docs/evidence/2026-09-19_dialer-sms-migration.md`,
+  `docs/evidence/2026-09-19_dialer-sms-live-drill.md`.
+
+#### Known boundaries
+
+- Physical SMS/USSD radio delivery requires a carrier gateway subscription + credits — the intake
+  and vote path are live and proven; only the radio hop is pending procurement.
+
+---
+
 ## [1.1.0] — 2026-09-18
 
 ### Sprint 4 — Offline Ballot Capture (ADR-008, full device pass)
