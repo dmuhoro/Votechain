@@ -1,0 +1,16 @@
+# AFTER FIX — profile hydration loads is_verified/is_admin from GET /api/auth/me
+# Bundle served: votechain-ivory.vercel.app post-fix build (index-DRmLaM44.js)
+# Command: node dialer-device.mjs ws://127.0.0.1:9222/devtools/page/1020 inspect
+
+== STEP 1: clear service worker + caches, load latest bundle ==
+  ✓ /dialer loaded (fresh bundle)
+  bundle: https://votechain-ivory.vercel.app/assets/index-DRmLaM44.js
+  auth-state on device: {"warning":false,"bindDisabled":true}
+
+# warning:false => the verified-only banner is gone (is_verified hydrated true).
+# bindDisabled:true here is expected: the phone input is still empty. The full
+# drill below shows the button enables once a number is typed. Screenshot:
+# 01-after-fix-bind-enabled.png
+#
+# Server truth for the same token:
+# GET /api/auth/me -> {"id":"20a83dd0-...","is_verified":true,"is_admin":false}

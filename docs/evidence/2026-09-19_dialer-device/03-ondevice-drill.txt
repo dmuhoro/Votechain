@@ -1,0 +1,30 @@
+# On-device dialer drill on a physical Android phone (post-fix bundle)
+# Device: 49IZ6DJ7SONNQOBE (USB, Chrome for Android, CDP over ADB :9222)
+# Command: node dialer-device.mjs ws://127.0.0.1:9222/devtools/page/1020 full
+
+== STEP 1: clear service worker + caches, load latest bundle ==
+  ✓ /dialer loaded (fresh bundle)
+  bundle: https://votechain-ivory.vercel.app/assets/index-DRmLaM44.js
+  auth-state on device: {"warning":false,"bindDisabled":true}
+== STEP 2: bind phone +254700009920 ==
+  bind enabled after input: true
+  bind click: {"clicked":true}
+  ✓ phone bound
+== STEP 3: issue one-time PIN ==
+  issue click: {"clicked":true}
+  ✓ PIN issued
+  device PIN: 504864 | command: VOTE 1 1 504864
+== STEP 4: simulate carrier gateway webhook -> real vote path ==
+  webhook: 200 {"message":"Vote cast successfully for Candidate A. Receipt code: V0B30046FCCB4. Text RECEIPT V0B30046FCCB4 anytime to verify.","outcome":"voted","electionId":1,"voteCode":"V0B30046FCCB4","txHash":"0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6"}
+== STEP 5: verify receipt on the device UI ==
+  verify click: {"clicked":true}
+  ✓ receipt verified on device
+  device receipt tx: 0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6
+RESULT {"voter":"20a83dd0-59b1-4dc4-be2c-cf7f7bb26577","phone":"+254700009920","pin":"504864","command":"VOTE 1 1 504864","outcome":"voted","voteCode":"V0B30046FCCB4","txHash":"0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6","deviceTx":"0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6"}
+ERRORS:
+(none)
+
+# The carrier radio hop is simulated because no gateway subscription/credits are
+# configured (SmsGateway default = SimulatedSmsGateway). Everything down-range of
+# the webhook is the real prod path: dialerService -> voteService.castVote ->
+# relayer -> Sepolia. Screenshots: 01..04 in this directory.

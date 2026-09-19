@@ -1,0 +1,15 @@
+# On-chain receipt + replay refusal (Sepolia)
+
+# GET /api/dialer/receipts/V0B30046FCCB4
+{"message":"Vote verified successfully.","voteCode":"V0B30046FCCB4","electionTitle":"General Election 2027 - Presidential","txHash":"0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6","blockNumber":11737270,"explorerUrl":"https://sepolia.etherscan.io/tx/0x0b30046fccb49670e26f7649874e2c933ac672896b29e0be74b2e42dfe8344b6"}
+
+# eth_getTransactionReceipt (https://ethereum-sepolia-rpc.publicnode.com)
+status=0x1
+block=11737270
+to=0x672a1d837c5c0992218205b0e81492a07d7c5eb5
+logs=1
+topic0=0x96c313364ec07441c94195f44ed1e5f2656059c98a7c0c68466dac90c6fd8bf9   # VoteCast(uint256,uint256,bytes32)
+
+# Replay of the same VOTE command (PIN already consumed) -> refused, no 2nd tx
+POST /api/dialer/sms {"From":"+254700009920","Body":"VOTE 1 1 504864","gateway":"simulated"}
+-> {"message":"No active dialer PIN for this election. Open the app and request a code first.","outcome":"no_active_code","electionId":1}

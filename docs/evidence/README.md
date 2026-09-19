@@ -27,3 +27,10 @@ A `PASS` requires a cited test or cited manual step — never narrative alone.
 | `2026-09-16_layer4-vote-path-hardening.md` | PASS | 2026-09-16 |
 | `2026-09-17_layer5-sepolia-and-preview-infra.md` | PASS | 2026-09-17 |
 | `2026-09-17_layer5-live-end-to-end.md` | PASS | 2026-09-17 |
+| `2026-09-18_sprint3-mobile-pwa-anti-fragility.md` | PASS | 2026-09-18 |
+| `2026-09-18_sprint3-phone-device-pass.md` | PASS | 2026-09-18 |
+| `2026-09-18_offline-ballots-migration.md` | PASS | 2026-09-18 |
+| `2026-09-18_sprint4-offline-device-pass.md` | PASS | 2026-09-18 |
+| `2026-09-19_dialer-sms-migration.md` | PASS | 2026-09-19 |
+| `2026-09-19_dialer-sms-live-drill.md` | PASS | 2026-09-19 |
+| `2026-09-19_dialer-ondevice-and-profile-hydration.md` | PASS | 2026-09-19 |

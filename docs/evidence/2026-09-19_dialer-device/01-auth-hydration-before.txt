@@ -1,0 +1,15 @@
+# BEFORE FIX — verified voter still treated as unverified on the physical phone
+# Bundle served: votechain-ivory.vercel.app pre-fix build (index-DR8li-G7.js)
+# Voter: 20a83dd0-59b1-4dc4-be2c-cf7f7bb26577 (verified in prod; /api/auth/me is_verified:true)
+# Command: node dialer-device.mjs ws://127.0.0.1:9222/devtools/page/1020 inspect
+
+== inject verified-voter session (20a83dd0-59b1-4dc4-be2c-cf7f7bb26577) ==
+  ✓ /dialer loaded
+  DOM: {"warning":true,"bindDisabled":true,"hasBindBtn":true}
+ERRORS:
+(none)
+
+# Interpretation: AuthCallbackPage/authStore hardcode is_verified:false and never
+# call GET /api/auth/me, so the amber "verified voters only" banner is shown and
+# the Bind button is disabled even for a verified voter. Screenshot:
+# 00-before-fix-warning-disabled.png
