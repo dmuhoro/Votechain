@@ -17,5 +17,5 @@
     "railway": "^3.11.0"
   },
   "description": "Trustless digital voting: provably uncountable-by-hand ballot tallies on-chain (Sepolia). Monorepo: Solidity contract, Express API, React SPA.",
-  "version": "1.2.0"
+  "version": "1.2.1"
 }

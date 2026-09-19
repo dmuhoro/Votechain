@@ -1,4 +1,26 @@
 
+## [1.2.1] — 2026-09-19
+
+### Fixed
+
+- **Verified/admin flags were never loaded in the frontend.** A Supabase session proves identity but
+  does not carry `is_verified`/`is_admin`, and nothing called the existing `GET /api/auth/me`; both
+  `AuthCallbackPage` and `authStore.initialize` hardcoded them to `false`. Every user was treated as
+  unverified, which **disabled the dialer's Bind phone action** (`DialerPage`) and hid/blocked the
+  Admin surface (`MobileBottomNav`, `AdminPage`). Added `lib/auth.getProfile()` + `toVoter()` and
+  hydrate on both sign-in paths; new `lib/auth.test.ts` (2 tests).
+
+### Verified (on-device, physical Android)
+
+- Full dialer flow from the phone UI: bind `+254700009920` → PIN `504864` →
+  `VOTE 1 1 504864` → receipt `V0B30046FCCB4` verified in-app; Sepolia `VoteCast` block
+  **11737270**; replay → `no_active_code`. Evidence:
+  `docs/evidence/2026-09-19_dialer-ondevice-and-profile-hydration.md`.
+- Gates: contracts `20/20`; backend build clean + `53/53`; frontend build clean + lint `0 warnings`
+  + `28/28`.
+
+---
+
 ## [1.2.0] — 2026-09-19
 
 ### Sprint 5 — Feature-Phone Dialer Reachability (ADR-009)
