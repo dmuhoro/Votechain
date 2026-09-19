@@ -33,4 +33,28 @@ smartphone capture).
    election, real Sepolia receipt), evidence, docs, commits, push.
 
 ## Result
-Filled in Layer 5 with evidence links.
+
+**COMPLETE (2026-09-19).** All five layers landed and are green.
+
+| Layer | Outcome | Evidence |
+|-------|---------|----------|
+| 1. ADR + docs | `ADR-009` (Accepted), ADR README row, architecture gaps row + dialer-path section | `279e371` |
+| 2. Migration | Applied to prod `gldfsjoikqydjxcarffr`: `voters.phone_number`, `elections.dial_code`, `dialer_codes` (partial unique one-issued-PIN), `sms_intake_log`, `vote_records.vote_code` (STORED generated), RLS | `docs/evidence/2026-09-19_dialer-sms-migration.md` |
+| 3. Backend | `dialerService` (grammar, PIN lifecycle, receipt), `SmsGateway` seam, `routes/dialer.ts` mounted at `/api/dialer`; admin create sets `dial_code` | `faf1cd1`; tests `8c460d3` |
+| 4. Frontend | `/dialer` page (bind → PIN → receipt) + API client + nav | `9d9d289`; tests `7973862` |
+| 5. Deploy + drill | Railway backend + Vercel frontend redeployed; live `VOTE` → on-chain `VoteCast` (block 11737079), receipt, replay refused `duplicate` | `docs/evidence/2026-09-19_dialer-sms-live-drill.md` |
+
+### Gates (all green)
+
+- contracts `20/20` · backend build clean · backend `53/53` · frontend build clean · frontend lint `0 warnings` · frontend `26/26`.
+
+### Honest boundary (unchanged from the design contract)
+
+- **Physical SMS delivery is not yet live.** A carrier subscription + credits (Twilio / Africa's
+  Talking) are an external dependency. The intake and all vote logic are real and proven; the drill
+  drove the gateway webhook shape with the `SimulatedSmsGateway`. This is the ONE remaining gap to
+  real feature-phone reach, and it is a procurement/enablement step — not code.
+- **USSD menu navigation** at the carrier is likewise gated on the same carrier relationship; the
+  terminus commands (`VOTE`/`RECEIPT`) are implemented and proven.
+- The dialer remains a convenience front door for **already-verified voters**; it is not a new
+  identity or counting authority (Constitution Article II intact).

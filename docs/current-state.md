@@ -3,74 +3,79 @@
 > Orientation doc. Read `docs/architecture.md` and `docs/engineering/CONSTITUTION.md` first.
 > Capabilities marked **ASPIRATIONAL** are not yet proven live.
 
-## As of 2026-09-18 (Sprint 3 — Mobile-First Anti-Fragility)
+## As of 2026-09-19 (Sprint 5 — Feature-Phone Dialer Reachability)
 
-**The full stack is live and proven end-to-end on Sepolia.** The contract is deployed and
-seeded on Sepolia, the backend runs on Railway, the frontend runs on Vercel as an
-**installable PWA**, live Supabase holds the read model, and **three real votes were cast
-through the public URLs and confirmed on-chain** — including two cast from the actual
-Android phone this session, plus live double-vote rejection (HTTP 409).
+**The full stack is live and proven end-to-end on Sepolia, now across three channels.** The
+contract is deployed on Sepolia, the backend runs on Railway, the frontend runs on Vercel as an
+installable PWA, and live Supabase holds the read model. Votes have been cast through:
+(1) the **online** path, (2) the **offline** smartphone path (captured on a physical Android
+device, auto-submitted on reconnect), and (3) the **dialer** path (a texted `VOTE` command on the
+deployed backend). Double-vote prevention holds on every channel.
 
 | Layer | Service | URL / Address | Evidence |
 |-------|---------|---------------|----------|
 | Frontend (PWA) | Vercel | https://votechain-ivory.vercel.app | `docs/evidence/2026-09-18_sprint3-mobile-pwa-anti-fragility.md` |
 | Backend | Railway | https://backend-production-64d05.up.railway.app | `docs/evidence/2026-09-17_layer5-live-end-to-end.md` |
 | Contract | Sepolia | `0x672a1D837c5C0992218205b0E81492a07D7C5EB5` | same |
-| Database | Supabase | `gldfsjoikqydjxcarffr` | same |
+| Database | Supabase | `gldfsjoikqydjxcarffr` | `docs/evidence/2026-09-19_dialer-sms-migration.md` |
 
-### DONE (Sprint 3 — with evidence in `docs/evidence/`)
+### DONE (Sprint 5 — dialer / feature-phone reachability, ADR-009)
 
-- **Installable Android PWA** — manifest, icons, theme color, workbox precache (19
-  entries), `navigateFallback`, read-only GET runtime caching; verified live over HTTPS
-  (manifest + `sw.js` + all icons 200; bundle wired to the live Railway API)
-- **Anti-fragility core** — `ErrorBoundary`, safe-storage wrapper, hardened `api.ts`
-  (15 s timeout, retry-once, typed errors, router-based 401), lazy Supabase client,
-  try/catch boot, `AuthCallbackPage` timeout + error card, online/offline store +
-  `OfflineBanner`, polling pause while hidden/offline
-- **Mobile-first UI** — `PageShell`, `MobileBottomNav` (44 px targets, safe-area),
-  scrollable modals, responsive `ResultsChart` + table fallback, tap-highlight/touch fixes
-- **Offline truth-telling + vote guard** — cached-data "stale" labels, reconnect-to-vote
-  fail-fast, in-flight double-submit guard on the vote path
-- **Frontend vitest suite green (13 tests)** — storage (incl. private-mode WebView throw
-  simulation), API error classification, network store
-- **On-device Android pass (2026-09-18)** — installed WebAPK standalone, offline cold
-  boot from SW precache + cached browse + "Reconnect to vote" fail-fast, banner-clear on
-  reconnect, zero exceptions on the final sweep, and **two real votes cast from the phone**
-  (B @ block 11730996, C @ block 11731055; tallies now A=1, B=1, C=1)
-- **Device-round fixes shipped** — cast timeout 15 s → 60 s (`useVote.ts`),
-  `/api/auth/verify-otp` 8-digit OTP detection (`packages/backend/src/routes/auth.ts`,
-  re-verified 200 against prod), Vercel CLI VITE-env loss (prebuilt deploy recipe in
-  the runbook)
-- **All gates green** — contracts 20/20, backend 8/8 + build, frontend build + lint
-  (0 warnings) + 13/13
-- Docs: sprint-3 file, Android runbook (with completed results table), ADR-007,
-  evidence files
+- **Dialer intake on the shared cast path** — `POST /api/dialer/sms` parses
+  `VOTE <electionCode> <candidate> <pin>` / `RECEIPT <voteCode>`, binds phone → verified voter,
+  verifies a one-time 6-digit PIN (SHA-256 digest, one active per voter+election, expiring), then
+  calls the **same** `voteService.castVote` as online/offline. No second counting authority.
+- **One-time PIN lifecycle** — provision / rotate-in-place / consume / refuse-after-consumed;
+  partial unique index is the fail-closed backstop. `POST /api/dialer/codes`, `GET|POST /api/dialer/phone`.
+- **Receipt codes** — `vote_records.vote_code` is a Postgres **generated** column
+  (`V` + first 12 hex of tx hash), so it can never drift from the tx it certifies; `RECEIPT` SMS
+  and `GET /api/dialer/receipts/:code` verify with no voter identity.
+- **No silent drops** — every inbound command is audited to `sms_intake_log` with an explicit
+  outcome (voted / duplicate / receipt / invalid_pin / expired / …).
+- **Gateway seam** — `SmsGateway` + `SimulatedSmsGateway` default; Twilio / Africa's Talking are
+  explicit stubs that fail loudly until configured. No claim of delivery without carrier credits.
+- **Frontend** `/dialer` page — bind phone, provision a PIN, show the exact SMS to send, verify a
+  receipt by code.
+- **Live drill** — on the deployed backend: `VOTE 1 1 246810` → `voted`,
+  receipt `V2E6A8BBA1009`, tx `0x2e6a8bba…8295`, block **11737079**, event
+  `VoteCast(uint256,uint256,bytes32)`; PIN rotated + replayed → `duplicate`, no second tx.
+- **Gates green** — contracts 20/20, backend 53/53 + build, frontend 26/26 + build + lint (0 warnings).
 
-### DONE (Sprint 2 — carried forward)
+### DONE (Sprint 4 — offline ballot capture, ADR-008)
 
-- Contract deployed on Sepolia (owner-deployer, relayer separate, ADR-003); election #1
-  seeded on-chain with matching Supabase row
-- Backend live on Railway (IaC); live end-to-end vote + duplicate-vote 409 proven
-- Two-boundary nullifier reorder (DB row written only after on-chain success)
-- `/api/stats`, configurable OTP rate limit, Dockerfile boots, CI green
-- Supabase schema as a versioned migration; deployment manifests; wallets funded
+- **Signed-voucher offline capture** — a voter downloads a signed ballot online, captures the vote
+  in the device vault while offline, and it auto-submits on reconnect through the **same** cast path.
+- **Physical Android device PASS** — airplane-on capture → reconnect auto-submit → server voucher
+  `consumed` → `VoteCast` on Sepolia (block 11731807).
+  Evidence: `docs/evidence/2026-09-18_sprint4-offline-device-pass.md`.
+- Backend `offlineBallotService` + `routes/offline.ts`; frontend vault + global `OfflineSync`.
+
+### DONE (Sprint 3 — mobile-first anti-fragility, carried forward)
+
+- Installable Android PWA (workbox precache, offline cold boot), anti-fragility core
+  (`ErrorBoundary`, safe storage, hardened `api.ts`, router-based 401), mobile-first UI
+  (bottom nav, `PageShell`, responsive results), offline truth-telling + vote guard.
+- Two real votes cast from the physical phone; `/api/auth/verify-otp` 8-digit fix.
+
+### DONE (Sprints 1–2, carried forward)
+
+- Contract on Sepolia (owner-deployer, relayer separate, ADR-003); election #1 seeded on-chain +
+  Supabase; backend live on Railway (IaC); two-boundary nullifier reorder (DB row only after
+  on-chain success); `/api/stats`; versioned Supabase migrations; CI green.
 
 ### ASPIRATIONAL (not yet proven live / not yet built)
 
-- **Offline ballot-pack voting** (ADR-006 Option B) — a new provisioning + reconciliation
-  subsystem with its own trust model; requires a design ADR + its own sprint (ADR-007
-  boundary)
-- **SMS/USSD feature-phone voting** (ADR-006 Option A backend) — carrier gateway + SMS
-  OTP channel, not built
-- **Broad device matrix** — the Sprint 3 accept bar (one Android phone, installed PWA
-  offline/recovery/vote) passed 2026-09-18; older Android / iOS / private-mode WebView /
-  low-memory devices are ongoing validation
-- Etherscan source verification of the deployed contract (no `ETHERSCAN_API_KEY` yet)
-- Real voter volume / load on the live endpoints (three votes to date)
-- CodeRabbit PR review (install needs the user's GitHub click at
-  https://github.com/apps/coderabbit/installations/new)
+- **Physical SMS/USSD delivery** — the dialer intake and vote path are live and proven, but the
+  radio hop needs a carrier gateway subscription + credits (Twilio / Africa's Talking). Procurement
+  step, not code. This is the single remaining gap to real feature-phone reach.
+- **Broad device matrix** — one Android accept bar passed; older Android / iOS / private-mode
+  WebView / low-memory devices are ongoing validation.
+- **Etherscan source verification** — needs `ETHERSCAN_API_KEY`.
+- **Real voter volume / load** on the live endpoints (six votes to date on election 1).
+- **CodeRabbit PR review** — pending user GitHub app install click.
+- **Offline coercion-resistance (receipt-freeness)** — inherently weaker offline (ADR-008 §4);
+  design constraint, not a task.
 
 ### P0 open
 
-None from the Sprint 3 golive are open. Remaining items are non-P0 enablers + the
-next-level milestone (offline ballot packs / SMS-USSD) listed above.
+None. No new subsystem will start while any P0 from `docs/architecture.md` is open.

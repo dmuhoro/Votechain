@@ -16,3 +16,5 @@ Every claim in a sprint file must have evidence in `docs/evidence/` (Constitutio
 | [Sprint 1](sprint-1-engineering-foundation.md) | Engineering Foundation + Deployment Readiness | Done |
 | [Sprint 2](sprint-2-hardening-and-readiness.md) | Hardening + Layer 5 LIVE on Sepolia/Railway/Vercel | Done |
 | [Sprint 3](sprint-3-mobile-anti-fragility.md) | Mobile-First Anti-Fragility (smart-phone PWA) | Done |
+| [Sprint 4](sprint-4-offline-ballot-capture.md) | Offline Ballot Capture (device vault + reconnect submit) | Done |
+| [Sprint 5](sprint-5-dialer-reachability.md) | Feature-Phone Dialer Reachability (SMS/USSD intake) | Done |

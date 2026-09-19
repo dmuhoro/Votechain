@@ -137,8 +137,8 @@ Africa's Talking adapters are documented stubs pending a carrier subscription).
 | Results/loading error states | P1 | ✅ Done (Sprint 3 anti-fragility core) | no |
 | Nullifier SELECT-then-INSERT race (TOCTOU) | P1 | ✅ DB UNIQUE backstop + graceful failure (ADR-002) | no |
 | Backend unit tests | P1 | ✅ Done (nullifier, voucher/path) | no |
-| Frontend component/unit tests | P2 | ✅ 14 vitest tests (incl. offline capture store) | no |
-| SMS/USSD feature-phone channel (ADR-006 Option A) | P2 | 🔨 Sprint 5 (ADR-009): dialer intake route + one-time PIN + audit log + receipt codes shipped; physical carrier delivery needs gateway credits | in progress |
+| Frontend component/unit tests | P2 | ✅ 26 vitest tests (incl. offline capture store + dialer API client) | no |
+| SMS/USSD feature-phone channel (ADR-006 Option A) | P2 | ✅ Done (Sprint 5, ADR-009): dialer intake route + one-time PIN + audit log + receipt codes, live Sepolia drill; physical carrier delivery still needs gateway credits | no |
 | Etherscan source verification | P2 | Not done — needs `ETHERSCAN_API_KEY` | yes |
 | Broad multi-device hardware matrix (older Android/iOS/private WebView) | P2 | Ongoing after single-device accept bar | yes |
 | CodeRabbit PR review | P2 | Pending user GitHub app install click | yes |

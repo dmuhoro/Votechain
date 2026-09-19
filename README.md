@@ -34,8 +34,9 @@ become the auditors.
 ## What this build does (current capabilities)
 
 - **Passwordless, wallet-less voting** — sign in with a one-time code (email OTP today;
-  SMS/USSD on feature phones scoped in ADR-006). No MetaMask, no tokens, no gas. The
-  backend *relayer* submits the on-chain transaction on the voter's behalf.
+  the dialer SMS/USSD channel in ADR-009 now covers feature phones, pending carrier gateway
+  credits). No MetaMask, no tokens, no gas. The backend *relayer* submits the on-chain
+  transaction on the voter's behalf.
 - **Tamper-evident ballots** — each vote is sealed by a deterministic nullifier and
   recorded on-chain with a public transaction hash. Results are read directly from the
   smart contract, not from a database someone could edit.
@@ -75,12 +76,42 @@ OTP → register → admin verify → cast → Sepolia tx `0xb1d3f344…` (block
 
 ---
 
-## Capabilities & strengths (latest — Sprint 4, 2026-09-18)
+## Capabilities & strengths (latest — Sprint 5, 2026-09-19)
 
 Everything below is live, SSH-signed, and backed by reproducible evidence in
 `docs/evidence/` (each claim maps to a gate that produced the observed output).
 
-### 1. Fully offline ballot capture — votes survive zero connectivity (ADR-008)
+### 1. Feature-phone dialer voting — vote by text, no browser, no data (ADR-009)
+
+A voter with a basic phone and no internet can vote through the dialer:
+
+- **Bind a phone to a verified voter** (never an anonymous identity). The number maps
+  to the verified `voters` row; unbound numbers are refused with an explicit reply.
+- **One-time 6-digit PIN.** `POST /api/dialer/codes` issues a PIN bound to
+  `{voter, election, phone}`, expiring with the election; only its SHA-256 digest is
+  stored, one active per (voter, election). It is the dialer analogue of the offline
+  voucher. The PIN must sit inside the vote command, so a bare `VOTE` is never a vote
+  before authentication.
+- **Text the command.** `VOTE <electionCode> <candidateId> <pin>` is received at the
+  carrier webhook (`POST /api/dialer/sms`) and runs the **exact same**
+  `voteService.castVote` as online/offline — nullifier → relayer → Sepolia → receipt.
+  No second counting authority.
+- **Receipt by code.** Each vote gets a short code (`V` + first 12 hex of the tx hash);
+  `RECEIPT <code>` or `GET /api/dialer/receipts/:code` re-verifies it with no voter
+  identity exposed.
+- **No silent drops.** Every inbound command is audited to `sms_intake_log` with an
+  explicit outcome (`voted`, `duplicate`, `expired`, `invalid_pin`, …).
+- **Gateway seam.** `SmsGateway` + `SimulatedSmsGateway` default; Twilio / Africa's
+  Talking are explicit stubs until a carrier subscription exists. We never claim SMS
+  delivery we cannot provide.
+
+> Live drill (deployed backend, 2026-09-19): `VOTE 1 1 246810` → `voted`, receipt
+> `V2E6A8BBA1009`, Sepolia tx `0x2e6a8bba…8295` (block **11737079**,
+> `VoteCast(uint256,uint256,bytes32)`); PIN rotated and replayed → `duplicate`,
+> no second transaction.
+> Evidence: `docs/evidence/2026-09-19_dialer-sms-live-drill.md`.
+
+### 2. Fully offline ballot capture — votes survive zero connectivity (ADR-008)
 
 A voter does **not** need a signal to vote. The PWA is a real polling station in
 the phone:
@@ -113,7 +144,7 @@ the phone:
 > auto-submit → voucher consumed → VotedCast on Sepolia (block 11731807).
 > Evidence: `docs/evidence/2026-09-18_sprint4-offline-device-pass.md`.
 
-### 2. Double-vote resistance at two boundaries (ADR-003, Article II)
+### 3. Double-vote resistance at two boundaries (ADR-003, Article II)
 
 - **Fast boundary:** a Supabase `nullifier` table rejects replays with HTTP 409 the
   moment a second attempt arrives — no relayer gas is spent on duplicates.
@@ -122,9 +153,9 @@ the phone:
   count. The offline flow keeps the same invariant: one voucher, one `consumed`, one
   nullifier, one vote on-chain.
 
-### 3. No wallet, no gas, no install — but real on-chain receipts
+### 4. No wallet, no gas, no install — but real on-chain receipts
 
-Voters use plain OTP (email today; USSD/SMS scoped in ADR-006) and the *relayer*
+Voters use plain OTP (email today; the dialer SMS/USSD channel is ADR-009) and the *relayer*
 pays gas. Voters literally cannot lose funds or keys; the platform keeps the
 security properties of a self-custody vote (signed nullifier, on-chain log) without
 the self-custody UX tax.
@@ -222,11 +253,12 @@ are documented in `.env.example`.
 
 ## Roadmap (agenda)
 
-- **ADR-006 in scope (next):** SMS/USSD feature-phone voting + mobile PWA feel, ~4–6 weeks,
-  no core-architecture change.
-- **Offline ballot packs:** new provisioning + reconciliation subsystem, ~3–4 months, needs
-  its own design ADR — see `docs/adr/ADR-006-mobile-and-otp-reachability.md` for the full
-  80/20 breakdown.
+- **Feature-phone / dialer reach (ADR-009) — shipped.** Intake, one-time PIN, audit log and
+  receipt codes are live and proven end-to-end. The remaining step is **procurement**: a carrier
+  gateway subscription + credits (Twilio / Africa's Talking) turns on the physical SMS/USSD radio
+  hop — no core-architecture change.
+- **Offline ballot packs:** provisioning + reconciliation subsystem shipped (Sprint 4, ADR-008);
+  see `docs/adr/ADR-006-mobile-and-otp-reachability.md` for the original 80/20 breakdown.
 - **Etherscan source verification** of the deployed contract (needs an API key).
 - **CodeRabbit PR review** once installed.
 
