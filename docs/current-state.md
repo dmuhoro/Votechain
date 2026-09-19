@@ -39,7 +39,13 @@ deployed backend). Double-vote prevention holds on every channel.
 - **Live drill** — on the deployed backend: `VOTE 1 1 246810` → `voted`,
   receipt `V2E6A8BBA1009`, tx `0x2e6a8bba…8295`, block **11737079**, event
   `VoteCast(uint256,uint256,bytes32)`; PIN rotated + replayed → `duplicate`, no second tx.
-- **Gates green** — contracts 20/20, backend 53/53 + build, frontend 26/26 + build + lint (0 warnings).
+- **On-device pass (physical Android)** — found and fixed a latent frontend bug: the app never
+  loaded `is_verified`/`is_admin` (Supabase sessions don't carry them), which silently disabled the
+  dialer bind action and the Admin surface. New `lib/auth.getProfile()` hydrates from
+  `GET /api/auth/me`; after redeploy the full `bind → PIN → VOTE → receipt` flow ran on the phone
+  UI, landing `VoteCast` at block **11737270**; replay → `no_active_code`.
+  Evidence: `docs/evidence/2026-09-19_dialer-ondevice-and-profile-hydration.md`.
+- **Gates green** — contracts 20/20, backend 53/53 + build, frontend 28/28 + build + lint (0 warnings).
 
 ### DONE (Sprint 4 — offline ballot capture, ADR-008)
 

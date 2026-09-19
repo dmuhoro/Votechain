@@ -31,10 +31,13 @@ smartphone capture).
 4. Frontend: `DialerPage` (how-to + provision a code + verify a receipt by code) + route + tests.
 5. Gates, deploy (Railway + Vercel), live **simulated-gateway drill on-chain** (real voter, real
    election, real Sepolia receipt), evidence, docs, commits, push.
+6. **On-device (physical Android) pass**: found and fixed a profile-hydration bug that made the
+   verified-only dialer UI unreachable; redeployed the frontend; drove the full dialer flow on the
+   real phone UI to Sepolia; captured on-device evidence.
 
 ## Result
 
-**COMPLETE (2026-09-19).** All five layers landed and are green.
+**COMPLETE (2026-09-19).** All six layers landed and are green.
 
 | Layer | Outcome | Evidence |
 |-------|---------|----------|
@@ -43,10 +46,20 @@ smartphone capture).
 | 3. Backend | `dialerService` (grammar, PIN lifecycle, receipt), `SmsGateway` seam, `routes/dialer.ts` mounted at `/api/dialer`; admin create sets `dial_code` | `faf1cd1`; tests `8c460d3` |
 | 4. Frontend | `/dialer` page (bind → PIN → receipt) + API client + nav | `9d9d289`; tests `7973862` |
 | 5. Deploy + drill | Railway backend + Vercel frontend redeployed; live `VOTE` → on-chain `VoteCast` (block 11737079), receipt, replay refused `duplicate` | `docs/evidence/2026-09-19_dialer-sms-live-drill.md` |
+| 6. On-device | Physical phone: profile hydration fixed, `/dialer` bind → PIN → `VOTE` → receipt verified in UI; on-chain `VoteCast` block 11737270, replay `no_active_code` | `docs/evidence/2026-09-19_dialer-ondevice-and-profile-hydration.md` |
+
+### Layer 6 — on-device pass (physical Android)
+
+The device pass exposed a **latent frontend bug**: the app never loaded authorization flags from the
+server, so `user.is_verified` was always `false`. That permanently disabled the dialer's **Bind
+phone** action and hid the Admin surface, even for verified voters. Fix: `lib/auth.ts`
+(`getProfile()` → `GET /api/auth/me`) + hydration in `authStore.initialize()` and `AuthCallbackPage`.
+After redeploy, the verified banner disappeared, the button enabled on input, and the full flow ran on
+the phone UI to a Sepolia `VoteCast` (block 11737270). Repro before/after: `docs/evidence/2026-09-19_dialer-device/`.
 
 ### Gates (all green)
 
-- contracts `20/20` · backend build clean · backend `53/53` · frontend build clean · frontend lint `0 warnings` · frontend `26/26`.
+- contracts `20/20` · backend build clean · backend `53/53` · frontend build clean · frontend lint `0 warnings` · frontend `28/28`.
 
 ### Honest boundary (unchanged from the design contract)
 

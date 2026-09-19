@@ -110,6 +110,13 @@ A voter with a basic phone and no internet can vote through the dialer:
 > `VoteCast(uint256,uint256,bytes32)`); PIN rotated and replayed → `duplicate`,
 > no second transaction.
 > Evidence: `docs/evidence/2026-09-19_dialer-sms-live-drill.md`.
+>
+> On-device pass (physical Android, 2026-09-19): the same flow driven from the phone UI —
+> `bind +254700009920` → PIN `504864` → `VOTE 1 1 504864` → receipt `V0B30046FCCB4`
+> verified in the app; `VoteCast` at block **11737270**; replay → `no_active_code`.
+> This pass also found and fixed a profile-hydration bug (verified/admin flags were never
+> loaded, disabling the dialer bind button). Evidence:
+> `docs/evidence/2026-09-19_dialer-ondevice-and-profile-hydration.md`.
 
 ### 2. Fully offline ballot capture — votes survive zero connectivity (ADR-008)
 
