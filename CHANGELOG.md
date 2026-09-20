@@ -1,5 +1,10 @@
 
-## [1.2.1] — 2026-09-19
+## [1.2.2] — 2026-09-20
+
+### Fixed
+
+- Added finalization evidence, updated sprint docs and released production tag.
+
 
 ### Fixed
 
